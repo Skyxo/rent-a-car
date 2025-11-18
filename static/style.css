@@ -1,0 +1,364 @@
+/* 
+ * Feuille de style pour l'application PV Matériel Loué
+ * Centrale Lyon Conseil
+ * Conforme à la charte graphique de l'École Centrale de Lyon
+ */
+
+/* Variables CSS pour la charte graphique */
+:root {
+    --clc-red: #CB1F1F;
+    --clc-navy: #001632;
+    --clc-blue-matisse: #1D7BAC;
+    --clc-light-gray: #f8f9fa;
+    --clc-border: #dee2e6;
+}
+
+/* Global */
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: #f5f5f5;
+}
+
+/* Header */
+.clc-header {
+    background: linear-gradient(135deg, var(--clc-navy) 0%, var(--clc-blue-matisse) 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.clc-header h1 {
+    color: white;
+    font-size: 1.8rem;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+}
+
+.clc-logo {
+    max-width: 300px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    filter: brightness(0) invert(1); /* Convertir le logo en blanc */
+}
+
+/* Cards */
+.card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.clc-card-header {
+    background-color: var(--clc-navy);
+    color: white;
+    font-weight: 600;
+    font-size: 1.1rem;
+    padding: 1rem 1.25rem;
+    border: none;
+}
+
+.clc-card-header i {
+    margin-right: 0.5rem;
+    color: var(--clc-red);
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Texte de couleur institutionnelle */
+.text-clc-navy {
+    color: var(--clc-navy);
+}
+
+.text-clc-red {
+    color: var(--clc-red);
+}
+
+/* Forms */
+.form-label {
+    font-weight: 600;
+    color: var(--clc-navy);
+    margin-bottom: 0.5rem;
+}
+
+.form-control,
+.form-select {
+    border: 2px solid var(--clc-border);
+    border-radius: 6px;
+    padding: 0.625rem 0.875rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--clc-blue-matisse);
+    box-shadow: 0 0 0 0.2rem rgba(29, 123, 172, 0.15);
+}
+
+/* Tables d'inspection */
+.inspection-table {
+    background-color: white;
+}
+
+.inspection-table thead th {
+    background-color: var(--clc-navy);
+    color: white;
+    font-weight: 600;
+    border: none;
+    padding: 0.875rem;
+}
+
+.inspection-table tbody td {
+    vertical-align: middle;
+    padding: 0.875rem;
+}
+
+.inspection-table tbody tr:nth-child(odd) {
+    background-color: #f8f9fa;
+}
+
+.inspection-table tbody tr:hover {
+    background-color: #e9ecef;
+    transition: background-color 0.2s ease;
+}
+
+/* Button Groups pour les choix radio */
+.btn-group {
+    display: flex;
+    width: 100%;
+}
+
+.btn-check:checked + .btn-outline-success {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: white;
+}
+
+.btn-check:checked + .btn-outline-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+.btn-check:checked + .btn-outline-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+.btn-outline-success,
+.btn-outline-danger,
+.btn-outline-secondary {
+    flex: 1;
+    border-width: 2px;
+}
+
+/* Boutons principaux */
+.btn-clc-red {
+    background-color: var(--clc-red);
+    border-color: var(--clc-red);
+    color: white;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.btn-clc-red:hover {
+    background-color: #a51919;
+    border-color: #a51919;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(203, 31, 31, 0.3);
+}
+
+.btn-clc-red:active {
+    transform: translateY(0);
+}
+
+/* Signature Canvas */
+.signature-container {
+    border: 3px solid var(--clc-navy);
+    border-radius: 8px;
+    background-color: white;
+    padding: 10px;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.signature-canvas {
+    width: 100%;
+    height: 200px;
+    touch-action: none;
+    cursor: crosshair;
+    border-radius: 4px;
+}
+
+/* Responsive pour mobile */
+@media (max-width: 768px) {
+    .clc-header h1 {
+        font-size: 1.4rem;
+    }
+    
+    .clc-logo {
+        max-width: 200px;
+    }
+    
+    .signature-canvas {
+        height: 150px;
+    }
+    
+    .btn-clc-red {
+        width: 100%;
+    }
+    
+    .inspection-table {
+        font-size: 0.85rem;
+    }
+    
+    .btn-group .btn {
+        font-size: 0.8rem;
+        padding: 0.4rem;
+    }
+}
+
+/* Alerts */
+.alert {
+    border-radius: 6px;
+    border: none;
+    padding: 1rem 1.25rem;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+/* Footer */
+.clc-footer {
+    background-color: var(--clc-navy);
+    color: white;
+    padding: 1.5rem 0;
+    margin-top: 3rem;
+}
+
+.clc-footer p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Print styles */
+@media print {
+    body {
+        background: white;
+    }
+    
+    .clc-header,
+    .clc-footer,
+    .btn,
+    .alert {
+        display: none;
+    }
+    
+    .card {
+        box-shadow: none;
+        page-break-inside: avoid;
+    }
+}
+
+/* Checkbox personnalisés */
+.form-check-input {
+    width: 1.25em;
+    height: 1.25em;
+    border: 2px solid var(--clc-navy);
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background-color: var(--clc-red);
+    border-color: var(--clc-red);
+}
+
+.form-check-label {
+    cursor: pointer;
+    margin-left: 0.5rem;
+}
+
+/* Section de dates avec mise en évidence */
+.date-box {
+    background: linear-gradient(to bottom, white, var(--clc-light-gray));
+    border-radius: 8px;
+}
+
+/* Badge pour champs obligatoires */
+.text-danger {
+    color: var(--clc-red) !important;
+}
+
+/* Amélioration du contraste pour accessibilité */
+::selection {
+    background-color: var(--clc-blue-matisse);
+    color: white;
+}
+
+/* Loading state (optionnel pour futures améliorations) */
+.btn-clc-red:disabled {
+    background-color: #ccc;
+    border-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Tooltips personnalisés (si ajoutés) */
+.tooltip-inner {
+    background-color: var(--clc-navy);
+}
+
+.tooltip.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: var(--clc-navy);
+}
+
+/* Scrollbar personnalisé (Chrome/Edge/Safari) */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--clc-light-gray);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--clc-blue-matisse);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--clc-navy);
+}

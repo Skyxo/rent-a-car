@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procès-Verbal de Matériel Loué</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #000;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #001632;
+            padding-bottom: 15px;
+        }
+        
+        .logo {
+            max-width: 250px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+        
+        h1 {
+            color: #001632;
+            font-size: 18pt;
+            margin-top: 10px;
+        }
+        
+        h2 {
+            color: #CB1F1F;
+            font-size: 12pt;
+            margin: 15px 0 10px 0;
+            border-bottom: 2px solid #CB1F1F;
+            padding-bottom: 3px;
+        }
+        
+        .info-section {
+            margin-bottom: 15px;
+        }
+        
+        .info-row {
+            display: flex;
+            margin-bottom: 5px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            width: 150px;
+            color: #001632;
+        }
+        
+        .info-value {
+            flex: 1;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            font-size: 9pt;
+        }
+        
+        th {
+            background-color: #001632;
+            color: white;
+            padding: 8px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #001632;
+        }
+        
+        td {
+            padding: 6px 8px;
+            border: 1px solid #333;
+        }
+        
+        .status-bon {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .status-defectueux {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .status-empty {
+            color: #999;
+        }
+        
+        .signature-section {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .signature-box {
+            width: 48%;
+            border: 2px solid #001632;
+            padding: 10px;
+            min-height: 120px;
+        }
+        
+        .signature-title {
+            font-weight: bold;
+            color: #CB1F1F;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .signature-img {
+            max-width: 100%;
+            max-height: 100px;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 8pt;
+            color: #666;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+        
+        .dates-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .date-box {
+            width: 48%;
+            border: 1px solid #001632;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+        
+        .date-box h3 {
+            color: #CB1F1F;
+            font-size: 11pt;
+            margin-bottom: 8px;
+        }
+        
+        .alert-fuite {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 5px;
+            margin: 5px 0;
+            color: #856404;
+            font-weight: bold;
+        }
+        
+        .observations-box {
+            border: 1px solid #001632;
+            padding: 10px;
+            margin: 10px 0;
+            min-height: 60px;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <!-- En-tête -->
+    <div class="header">
+        <img src="https://www.centralelyonconseil.fr/wp-content/uploads/2023/10/logo_horizontal_avectexte.png" 
+             alt="Centrale Lyon Conseil" 
+             class="logo">
+        <h1>PROCÈS-VERBAL DE MATÉRIEL LOUÉ</h1>
+    </div>
+
+    <!-- Informations Générales -->
+    <div class="info-section">
+        <h2>Identification du Matériel</h2>
+        <div class="info-row">
+            <div class="info-label">Chantier :</div>
+            <div class="info-value">{{ chantier }}</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Matériel / N° :</div>
+            <div class="info-value">{{ materiel_numero }}</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Type :</div>
+            <div class="info-value">{{ materiel_type }}</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Fournisseur :</div>
+            <div class="info-value">{{ fournisseur }}</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Responsable Chantier :</div>
+            <div class="info-value">{{ responsable }}</div>
+        </div>
+    </div>
+
+    <!-- Dates et Compteurs -->
+    <div class="dates-section">
+        <div class="date-box">
+            <h3>RÉCEPTION</h3>
+            <div class="info-row">
+                <div class="info-label">Date :</div>
+                <div class="info-value">{{ date_reception or 'Non renseigné' }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Compteur :</div>
+                <div class="info-value">{{ compteur_reception or 'N/A' }} h</div>
+            </div>
+        </div>
+        
+        <div class="date-box">
+            <h3>RETOUR</h3>
+            <div class="info-row">
+                <div class="info-label">Date :</div>
+                <div class="info-value">{{ date_retour or 'Non renseigné' }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Compteur :</div>
+                <div class="info-value">{{ compteur_retour or 'N/A' }} h</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inspection - Aspect Extérieur -->
+    <h2>Inspection - Aspect Extérieur</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 40%;">Élément</th>
+                <th style="width: 30%; text-align: center;">Réception</th>
+                <th style="width: 30%; text-align: center;">Retour</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Carrosserie / Rétroviseurs</td>
+                <td style="text-align: center;">
+                    {% if carrosserie_reception == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif carrosserie_reception == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if carrosserie_retour == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif carrosserie_retour == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Éclairage / Gyrophare</td>
+                <td style="text-align: center;">
+                    {% if eclairage_reception == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif eclairage_reception == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if eclairage_retour == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif eclairage_retour == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Pneumatiques</td>
+                <td style="text-align: center;">
+                    {% if pneumatiques_reception == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif pneumatiques_reception == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if pneumatiques_retour == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif pneumatiques_retour == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Panier (si applicable)</td>
+                <td style="text-align: center;">
+                    {% if panier_reception == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif panier_reception == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if panier_retour == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif panier_retour == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Flexibles, faisceaux électrique</td>
+                <td style="text-align: center;">
+                    {% if flexibles_reception == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif flexibles_reception == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if flexibles_retour == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif flexibles_retour == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Commandes</td>
+                <td style="text-align: center;">
+                    {% if commandes_reception == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif commandes_reception == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if commandes_retour == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif commandes_retour == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Inspection - Fonctionnement -->
+    <h2>Inspection - Fonctionnement</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 40%;">Élément</th>
+                <th style="width: 30%; text-align: center;">Réception</th>
+                <th style="width: 30%; text-align: center;">Retour</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Conformité réglementaire</td>
+                <td style="text-align: center;">
+                    {% if conformite_reception == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif conformite_reception == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if conformite_retour == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif conformite_retour == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Essais de mobilités</td>
+                <td style="text-align: center;">
+                    {% if mobilites_reception == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif mobilites_reception == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if mobilites_retour == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif mobilites_retour == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Essais de nacelles</td>
+                <td style="text-align: center;">
+                    {% if nacelles_reception == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif nacelles_reception == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if nacelles_retour == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif nacelles_retour == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Dispositifs de sécurité</td>
+                <td style="text-align: center;">
+                    {% if securite_reception == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif securite_reception == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if securite_retour == 'bon' %}
+                        <span class="status-bon">✓ BON</span>
+                    {% elif securite_retour == 'defectueux' %}
+                        <span class="status-defectueux">✗ DÉFECTUEUX</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Fluides -->
+    <h2>Fluides</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 40%;">Type</th>
+                <th style="width: 30%; text-align: center;">Réception</th>
+                <th style="width: 30%; text-align: center;">Retour</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Niveau Carburant</td>
+                <td style="text-align: center;">{{ carburant_reception or '-' }}</td>
+                <td style="text-align: center;">{{ carburant_retour or '-' }}</td>
+            </tr>
+            <tr>
+                <td>Fuites Moteur</td>
+                <td style="text-align: center;">
+                    {% if fuite_moteur_reception == 'oui' %}
+                        <span class="status-defectueux">⚠ OUI</span>
+                    {% else %}
+                        <span class="status-bon">NON</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if fuite_moteur_retour == 'oui' %}
+                        <span class="status-defectueux">⚠ OUI</span>
+                    {% else %}
+                        <span class="status-bon">NON</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Fuites Hydraulique</td>
+                <td style="text-align: center;">
+                    {% if fuite_hydraulique_reception == 'oui' %}
+                        <span class="status-defectueux">⚠ OUI</span>
+                    {% else %}
+                        <span class="status-bon">NON</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if fuite_hydraulique_retour == 'oui' %}
+                        <span class="status-defectueux">⚠ OUI</span>
+                    {% else %}
+                        <span class="status-bon">NON</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Fuites Gasoil</td>
+                <td style="text-align: center;">
+                    {% if fuite_gasoil_reception == 'oui' %}
+                        <span class="status-defectueux">⚠ OUI</span>
+                    {% else %}
+                        <span class="status-bon">NON</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if fuite_gasoil_retour == 'oui' %}
+                        <span class="status-defectueux">⚠ OUI</span>
+                    {% else %}
+                        <span class="status-bon">NON</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Observations -->
+    <h2>Observations</h2>
+    <div class="dates-section">
+        <div class="observations-box" style="width: 48%;">
+            <strong>Réception :</strong><br>
+            {{ observations_reception or 'Aucune observation' }}
+        </div>
+        <div class="observations-box" style="width: 48%;">
+            <strong>Retour :</strong><br>
+            {{ observations_retour or 'Aucune observation' }}
+        </div>
+    </div>
+
+    <!-- Signatures -->
+    <div class="signature-section">
+        <div class="signature-box">
+            <div class="signature-title">VISA RÉCEPTION</div>
+            {% if signature_reception %}
+                <img src="{{ signature_reception }}" alt="Signature Réception" class="signature-img">
+            {% else %}
+                <p style="text-align: center; color: #999; margin-top: 30px;">Non signée</p>
+            {% endif %}
+        </div>
+        
+        <div class="signature-box">
+            <div class="signature-title">VISA RETOUR</div>
+            {% if signature_retour %}
+                <img src="{{ signature_retour }}" alt="Signature Retour" class="signature-img">
+            {% else %}
+                <p style="text-align: center; color: #999; margin-top: 30px;">Non signée</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>Document généré automatiquement le {{ date_generation }}</p>
+        <p>Centrale Lyon Conseil - École Centrale de Lyon</p>
+    </div>
+</body>
+</html>

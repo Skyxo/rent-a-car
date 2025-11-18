@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PV Matériel Loué - Centrale Lyon Conseil</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome pour les icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- CSS personnalisé -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Header avec logo -->
+    <header class="clc-header">
+        <div class="container">
+            <img src="https://www.centralelyonconseil.fr/wp-content/uploads/2023/10/logo_horizontal_avectexte.png" 
+                 alt="Centrale Lyon Conseil" 
+                 class="clc-logo">
+            <h1 class="text-center mt-3 mb-0">Procès-Verbal de Matériel Loué</h1>
+        </div>
+    </header>
+
+    <main class="container my-5">
+        <!-- Messages Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form id="pvForm" method="POST" action="/submit">
+            <!-- Section 1: Informations Générales -->
+            <div class="card mb-4">
+                <div class="card-header clc-card-header">
+                    <i class="fas fa-info-circle"></i> Informations Générales
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="chantier" class="form-label">Chantier <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="chantier" name="chantier" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email_destinataire" class="form-label">Email destinataire <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="email_destinataire" name="email_destinataire" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="materiel_numero" class="form-label">Matériel / N°</label>
+                            <input type="text" class="form-control" id="materiel_numero" name="materiel_numero">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="materiel_type" class="form-label">Type</label>
+                            <input type="text" class="form-control" id="materiel_type" name="materiel_type">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="fournisseur" class="form-label">Fournisseur</label>
+                            <input type="text" class="form-control" id="fournisseur" name="fournisseur">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="responsable" class="form-label">Responsable Chantier</label>
+                            <input type="text" class="form-control" id="responsable" name="responsable">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Dates et Compteurs -->
+            <div class="card mb-4">
+                <div class="card-header clc-card-header">
+                    <i class="fas fa-calendar-alt"></i> Dates et Compteurs
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="text-clc-navy mb-3"><i class="fas fa-arrow-down"></i> Réception</h5>
+                            <div class="mb-3">
+                                <label for="date_reception" class="form-label">Date de réception</label>
+                                <input type="date" class="form-control" id="date_reception" name="date_reception">
+                            </div>
+                            <div class="mb-3">
+                                <label for="compteur_reception" class="form-label">Compteur d'heure</label>
+                                <input type="number" class="form-control" id="compteur_reception" name="compteur_reception" min="0" step="0.1">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5 class="text-clc-navy mb-3"><i class="fas fa-arrow-up"></i> Retour</h5>
+                            <div class="mb-3">
+                                <label for="date_retour" class="form-label">Date de retour</label>
+                                <input type="date" class="form-control" id="date_retour" name="date_retour">
+                            </div>
+                            <div class="mb-3">
+                                <label for="compteur_retour" class="form-label">Compteur d'heure</label>
+                                <input type="number" class="form-control" id="compteur_retour" name="compteur_retour" min="0" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Inspection - Aspect Extérieur -->
+            <div class="card mb-4">
+                <div class="card-header clc-card-header">
+                    <i class="fas fa-search"></i> Inspection - Aspect Extérieur
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered inspection-table">
+                            <thead>
+                                <tr>
+                                    <th>Élément</th>
+                                    <th class="text-center">Réception</th>
+                                    <th class="text-center">Retour</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Carrosserie / Rétroviseurs</td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="carrosserie_reception" id="carrosserie_reception_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="carrosserie_reception_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="carrosserie_reception" id="carrosserie_reception_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="carrosserie_reception_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="carrosserie_retour" id="carrosserie_retour_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="carrosserie_retour_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="carrosserie_retour" id="carrosserie_retour_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="carrosserie_retour_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td>Éclairage / Gyrophare</td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="eclairage_reception" id="eclairage_reception_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="eclairage_reception_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="eclairage_reception" id="eclairage_reception_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="eclairage_reception_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="eclairage_retour" id="eclairage_retour_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="eclairage_retour_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="eclairage_retour" id="eclairage_retour_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="eclairage_retour_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td>Pneumatiques</td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="pneumatiques_reception" id="pneumatiques_reception_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="pneumatiques_reception_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="pneumatiques_reception" id="pneumatiques_reception_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="pneumatiques_reception_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="pneumatiques_retour" id="pneumatiques_retour_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="pneumatiques_retour_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="pneumatiques_retour" id="pneumatiques_retour_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="pneumatiques_retour_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td>Panier (si applicable)</td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="panier_reception" id="panier_reception_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="panier_reception_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="panier_reception" id="panier_reception_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="panier_reception_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="panier_retour" id="panier_retour_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="panier_retour_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="panier_retour" id="panier_retour_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="panier_retour_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td>Flexibles, faisceaux électrique</td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="flexibles_reception" id="flexibles_reception_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="flexibles_reception_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="flexibles_reception" id="flexibles_reception_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="flexibles_reception_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="flexibles_retour" id="flexibles_retour_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="flexibles_retour_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="flexibles_retour" id="flexibles_retour_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="flexibles_retour_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td>Commandes</td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="commandes_reception" id="commandes_reception_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="commandes_reception_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="commandes_reception" id="commandes_reception_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="commandes_reception_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="commandes_retour" id="commandes_retour_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="commandes_retour_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="commandes_retour" id="commandes_retour_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="commandes_retour_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 4: Inspection - Fonctionnement -->
+            <div class="card mb-4">
+                <div class="card-header clc-card-header">
+                    <i class="fas fa-cogs"></i> Inspection - Fonctionnement
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered inspection-table">
+                            <thead>
+                                <tr>
+                                    <th>Élément</th>
+                                    <th class="text-center">Réception</th>
+                                    <th class="text-center">Retour</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Conformité réglementaire</td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="conformite_reception" id="conformite_reception_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="conformite_reception_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="conformite_reception" id="conformite_reception_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="conformite_reception_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="conformite_retour" id="conformite_retour_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="conformite_retour_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="conformite_retour" id="conformite_retour_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="conformite_retour_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td>Essais de mobilités</td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="mobilites_reception" id="mobilites_reception_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="mobilites_reception_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="mobilites_reception" id="mobilites_reception_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="mobilites_reception_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="mobilites_retour" id="mobilites_retour_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="mobilites_retour_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="mobilites_retour" id="mobilites_retour_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="mobilites_retour_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td>Essais de nacelles</td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="nacelles_reception" id="nacelles_reception_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="nacelles_reception_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="nacelles_reception" id="nacelles_reception_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="nacelles_reception_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="nacelles_retour" id="nacelles_retour_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="nacelles_retour_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="nacelles_retour" id="nacelles_retour_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="nacelles_retour_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr>
+                                    <td>Dispositifs de sécurité</td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="securite_reception" id="securite_reception_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="securite_reception_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="securite_reception" id="securite_reception_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="securite_reception_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group w-100" role="group">
+                                            <input type="radio" class="btn-check" name="securite_retour" id="securite_retour_bon" value="bon">
+                                            <label class="btn btn-outline-success btn-sm" for="securite_retour_bon">Bon</label>
+                                            
+                                            <input type="radio" class="btn-check" name="securite_retour" id="securite_retour_defectueux" value="defectueux">
+                                            <label class="btn btn-outline-danger btn-sm" for="securite_retour_defectueux">Défectueux</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 5: Fluides -->
+            <div class="card mb-4">
+                <div class="card-header clc-card-header">
+                    <i class="fas fa-tint"></i> Fluides
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="text-clc-navy mb-3">Réception</h5>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Niveau Carburant</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="carburant_reception" id="carburant_reception_0" value="0">
+                                    <label class="btn btn-outline-secondary btn-sm" for="carburant_reception_0">0</label>
+                                    
+                                    <input type="radio" class="btn-check" name="carburant_reception" id="carburant_reception_half" value="1/2">
+                                    <label class="btn btn-outline-secondary btn-sm" for="carburant_reception_half">1/2</label>
+                                    
+                                    <input type="radio" class="btn-check" name="carburant_reception" id="carburant_reception_1" value="1">
+                                    <label class="btn btn-outline-secondary btn-sm" for="carburant_reception_1">1</label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Fuites</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="fuite_moteur_reception" id="fuite_moteur_reception" value="oui">
+                                    <label class="form-check-label" for="fuite_moteur_reception">Moteur</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="fuite_hydraulique_reception" id="fuite_hydraulique_reception" value="oui">
+                                    <label class="form-check-label" for="fuite_hydraulique_reception">Hydraulique</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="fuite_gasoil_reception" id="fuite_gasoil_reception" value="oui">
+                                    <label class="form-check-label" for="fuite_gasoil_reception">Gasoil</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5 class="text-clc-navy mb-3">Retour</h5>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Niveau Carburant</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="carburant_retour" id="carburant_retour_0" value="0">
+                                    <label class="btn btn-outline-secondary btn-sm" for="carburant_retour_0">0</label>
+                                    
+                                    <input type="radio" class="btn-check" name="carburant_retour" id="carburant_retour_half" value="1/2">
+                                    <label class="btn btn-outline-secondary btn-sm" for="carburant_retour_half">1/2</label>
+                                    
+                                    <input type="radio" class="btn-check" name="carburant_retour" id="carburant_retour_1" value="1">
+                                    <label class="btn btn-outline-secondary btn-sm" for="carburant_retour_1">1</label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Fuites</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="fuite_moteur_retour" id="fuite_moteur_retour" value="oui">
+                                    <label class="form-check-label" for="fuite_moteur_retour">Moteur</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="fuite_hydraulique_retour" id="fuite_hydraulique_retour" value="oui">
+                                    <label class="form-check-label" for="fuite_hydraulique_retour">Hydraulique</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="fuite_gasoil_retour" id="fuite_gasoil_retour" value="oui">
+                                    <label class="form-check-label" for="fuite_gasoil_retour">Gasoil</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 6: Observations -->
+            <div class="card mb-4">
+                <div class="card-header clc-card-header">
+                    <i class="fas fa-comment"></i> Observations
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="observations_reception" class="form-label">Observations Réception</label>
+                            <textarea class="form-control" id="observations_reception" name="observations_reception" rows="4"></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="observations_retour" class="form-label">Observations Retour</label>
+                            <textarea class="form-control" id="observations_retour" name="observations_retour" rows="4"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 7: Signatures -->
+            <div class="card mb-4">
+                <div class="card-header clc-card-header">
+                    <i class="fas fa-signature"></i> Signatures
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <h5 class="text-clc-navy mb-3">VISA Réception</h5>
+                            <div class="signature-container">
+                                <canvas id="signatureReception" class="signature-canvas"></canvas>
+                            </div>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="clearSignature('Reception')">
+                                    <i class="fas fa-eraser"></i> Effacer
+                                </button>
+                            </div>
+                            <input type="hidden" name="signature_reception" id="signature_reception_data">
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <h5 class="text-clc-navy mb-3">VISA Retour</h5>
+                            <div class="signature-container">
+                                <canvas id="signatureRetour" class="signature-canvas"></canvas>
+                            </div>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="clearSignature('Retour')">
+                                    <i class="fas fa-eraser"></i> Effacer
+                                </button>
+                            </div>
+                            <input type="hidden" name="signature_retour" id="signature_retour_data">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bouton de soumission -->
+            <div class="text-center">
+                <button type="submit" class="btn btn-clc-red btn-lg">
+                    <i class="fas fa-paper-plane"></i> Générer et Envoyer le PV
+                </button>
+            </div>
+        </form>
+    </main>
+
+    <footer class="clc-footer mt-5">
+        <div class="container text-center">
+            <p class="mb-0">&copy; 2025 Centrale Lyon Conseil - Tous droits réservés</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Signature Pad -->
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    
+    <!-- Script personnalisé -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
