@@ -148,6 +148,40 @@
             margin-bottom: 15px;
         }
         
+        .photos-section {
+            margin-top: 15px;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+        
+        .photos-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .photo-item {
+            width: calc(33% - 7px);
+            border: 1px solid #ddd;
+            padding: 5px;
+            text-align: center;
+        }
+        
+        .photo-item img {
+            max-width: 100%;
+            max-height: 150px;
+            height: auto;
+            display: block;
+            margin: 0 auto 5px auto;
+        }
+        
+        .photo-label {
+            font-size: 8pt;
+            color: #666;
+            font-weight: bold;
+        }
+        
         .date-box {
             width: 48%;
             border: 1px solid #001632;
@@ -385,6 +419,56 @@
         </tbody>
     </table>
 
+    <!-- Photos - Aspect Extérieur -->
+    {% if photo_carrosserie or photo_eclairage or photo_pneumatiques or photo_panier or photo_flexibles or photo_commandes %}
+    <div class="photos-section">
+        <h3 style="color: #001632; font-size: 10pt; margin-bottom: 8px;">📷 Photos - Aspect Extérieur</h3>
+        <div class="photos-grid">
+            {% if photo_carrosserie %}
+            <div class="photo-item">
+                <img src="{{ photo_carrosserie }}" alt="Carrosserie">
+                <div class="photo-label">Carrosserie / Rétroviseurs</div>
+            </div>
+            {% endif %}
+            
+            {% if photo_eclairage %}
+            <div class="photo-item">
+                <img src="{{ photo_eclairage }}" alt="Éclairage">
+                <div class="photo-label">Éclairage / Gyrophare</div>
+            </div>
+            {% endif %}
+            
+            {% if photo_pneumatiques %}
+            <div class="photo-item">
+                <img src="{{ photo_pneumatiques }}" alt="Pneumatiques">
+                <div class="photo-label">Pneumatiques</div>
+            </div>
+            {% endif %}
+            
+            {% if photo_panier %}
+            <div class="photo-item">
+                <img src="{{ photo_panier }}" alt="Panier">
+                <div class="photo-label">Panier</div>
+            </div>
+            {% endif %}
+            
+            {% if photo_flexibles %}
+            <div class="photo-item">
+                <img src="{{ photo_flexibles }}" alt="Flexibles">
+                <div class="photo-label">Flexibles / Faisceaux</div>
+            </div>
+            {% endif %}
+            
+            {% if photo_commandes %}
+            <div class="photo-item">
+                <img src="{{ photo_commandes }}" alt="Commandes">
+                <div class="photo-label">Commandes</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Inspection - Fonctionnement -->
     <h2>Inspection - Fonctionnement</h2>
     <table>
@@ -486,6 +570,42 @@
         </tbody>
     </table>
 
+    <!-- Photos - Fonctionnement -->
+    {% if photo_conformite or photo_mobilites or photo_nacelles or photo_securite %}
+    <div class="photos-section">
+        <h3 style="color: #001632; font-size: 10pt; margin-bottom: 8px;">📷 Photos - Fonctionnement</h3>
+        <div class="photos-grid">
+            {% if photo_conformite %}
+            <div class="photo-item">
+                <img src="{{ photo_conformite }}" alt="Conformité">
+                <div class="photo-label">Conformité réglementaire</div>
+            </div>
+            {% endif %}
+            
+            {% if photo_mobilites %}
+            <div class="photo-item">
+                <img src="{{ photo_mobilites }}" alt="Mobilités">
+                <div class="photo-label">Essais de mobilités</div>
+            </div>
+            {% endif %}
+            
+            {% if photo_nacelles %}
+            <div class="photo-item">
+                <img src="{{ photo_nacelles }}" alt="Nacelles">
+                <div class="photo-label">Essais de nacelles</div>
+            </div>
+            {% endif %}
+            
+            {% if photo_securite %}
+            <div class="photo-item">
+                <img src="{{ photo_securite }}" alt="Sécurité">
+                <div class="photo-label">Dispositifs de sécurité</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Fluides -->
     <h2>Fluides</h2>
     <table>
@@ -556,6 +676,28 @@
         </tbody>
     </table>
 
+    <!-- Photos - Fuites -->
+    {% if photo_fuite_reception or photo_fuite_retour %}
+    <div class="photos-section">
+        <h3 style="color: #001632; font-size: 10pt; margin-bottom: 8px;">📷 Photos - Fuites</h3>
+        <div class="photos-grid">
+            {% if photo_fuite_reception %}
+            <div class="photo-item">
+                <img src="{{ photo_fuite_reception }}" alt="Fuites Réception">
+                <div class="photo-label">Fuites - Réception</div>
+            </div>
+            {% endif %}
+            
+            {% if photo_fuite_retour %}
+            <div class="photo-item">
+                <img src="{{ photo_fuite_retour }}" alt="Fuites Retour">
+                <div class="photo-label">Fuites - Retour</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Observations -->
     <h2>Observations</h2>
     <div class="dates-section">
@@ -568,6 +710,28 @@
             {{ observations_retour or 'Aucune observation' }}
         </div>
     </div>
+
+    <!-- Photos - Observations -->
+    {% if photo_observation_reception or photo_observation_retour %}
+    <div class="photos-section">
+        <h3 style="color: #001632; font-size: 10pt; margin-bottom: 8px;">📷 Photos - Observations</h3>
+        <div class="photos-grid">
+            {% if photo_observation_reception %}
+            <div class="photo-item">
+                <img src="{{ photo_observation_reception }}" alt="Observations Réception">
+                <div class="photo-label">Observations - Réception</div>
+            </div>
+            {% endif %}
+            
+            {% if photo_observation_retour %}
+            <div class="photo-item">
+                <img src="{{ photo_observation_retour }}" alt="Observations Retour">
+                <div class="photo-label">Observations - Retour</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Signatures -->
     <div class="signature-section">

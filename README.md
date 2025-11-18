@@ -1,29 +1,55 @@
-# Application de Numérisation des Procès-Verbaux de Matériel Loué
+# PV Matériel Loué - Centrale Lyon Conseil
 
-## 🎯 Centrale Lyon Conseil
+## 🎯 Application de Gestion des Procès-Verbaux de Matériel Loué
 
-Application web développée pour Centrale Lyon Conseil permettant la numérisation du processus de gestion des locations de matériel. Cette solution transforme les procès-verbaux papier en documents PDF professionnels avec signatures électroniques et envoi automatisé par email.
+Application web professionnelle développée pour Centrale Lyon Conseil permettant la numérisation complète du processus de gestion des locations de matériel. Cette solution transforme les procès-verbaux papier en documents PDF professionnels avec photos, signatures électroniques et envoi automatisé par email.
 
----
+### ✨ Fonctionnalités Principales
 
-## 📋 Spécifications Techniques
-
-### Architecture
-- **Backend** : Flask (Python 3.11+)
-- **Frontend** : HTML5 / CSS3 / JavaScript (Bootstrap 5)
-- **Génération PDF** : WeasyPrint
-- **Signature électronique** : signature_pad.js
-- **Envoi Email** : SMTP natif Python
-
-### Conformité Charte Graphique
-L'application respecte strictement l'identité visuelle de l'École Centrale de Lyon :
-- **Rouge Centrale** : `#CB1F1F`
-- **Bleu Navy** : `#001632`
-- **Bleu Matisse** : `#1D7BAC`
+- ✅ **Formulaire intelligent** : Saisie guidée pour réception et retour de matériel
+- 📸 **Photos intégrées** : Upload de photos pour chaque poste d'inspection + observations
+- ✍️ **Signatures électroniques** : Capture tactile des signatures (compatible mobile)
+- 📄 **Génération PDF** : Documents professionnels avec photos et signatures
+- 📧 **Envoi automatique** : Email avec PDF en pièce jointe aux destinataires
+- 💾 **Gestion des brouillons** : Sauvegarde et reprise des PV en cours
+- ⚙️ **Configuration web** : Paramètres SMTP configurables sans toucher au code
+- 📱 **100% Responsive** : Interface optimisée pour tablettes et smartphones
+- 🎨 **Charte graphique CLC** : Respect de l'identité visuelle École Centrale de Lyon
 
 ---
 
-## 🚀 Installation
+## 🚀 DÉPLOIEMENT EN PRODUCTION
+
+### 🌐 Serveur : **188.137.240.250** (Zomro)
+
+### Option 1 : Déploiement automatique rapide (Recommandé)
+
+```bash
+cd /home/charl/rent-a-car
+./deploy/quick-deploy.sh
+```
+
+Ce script interactif vous guidera à travers toutes les étapes.
+
+### Option 2 : Test de connexion d'abord
+
+```bash
+./deploy/test-connexion.sh
+```
+
+### Option 3 : Déploiement manuel
+
+Consultez le guide complet : **[DEPLOY.md](DEPLOY.md)**
+
+### Après le déploiement
+
+1. **Accéder à l'application** : http://188.137.240.250
+2. **Configurer l'email** : Cliquer sur "⚙️ Configuration Email"
+3. **Tester l'envoi** : Utiliser le bouton "Tester la connexion"
+
+---
+
+## 💻 DÉVELOPPEMENT LOCAL
 
 ### Prérequis
 
