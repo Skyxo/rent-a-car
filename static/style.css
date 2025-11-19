@@ -234,6 +234,9 @@ body {
     padding: 0;
     border: none;
     background: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .form-control[type="file"]::before {
@@ -246,7 +249,7 @@ body {
     border: 2px solid var(--clc-navy);
     border-radius: 8px;
     padding: 0.75rem;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
