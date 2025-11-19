@@ -119,7 +119,15 @@ def send_email_with_pdf(pdf_bytes, recipients, chantier_name, date_reception):
     Returns:
         tuple: (success: bool, message: str)
     """
-    if not SMTP_USERNAME or not SMTP_PASSWORD:
+    # Recharger la configuration SMTP depuis le fichier
+    config = load_smtp_config()
+    smtp_server = config.get('smtp_server', 'smtp.gmail.com')
+    smtp_port = config.get('smtp_port', 587)
+    smtp_username = config.get('smtp_username', '')
+    smtp_password = config.get('smtp_password', '')
+    smtp_from_name = config.get('smtp_from_name', 'Centrale Lyon Conseil')
+    
+    if not smtp_username or not smtp_password:
         return False, """⚠️ Configuration email non configurée. 
         
 Pour activer l'envoi automatique des PV par email, cliquez sur le bouton "⚙️ Configuration" en haut de la page et remplissez les paramètres SMTP.
@@ -138,7 +146,7 @@ Pour activer l'envoi automatique des PV par email, cliquez sur le bouton "⚙️
     try:
         # Construire le message MIME
         msg = MIMEMultipart()
-        msg['From'] = f"{SMTP_FROM_NAME} <{SMTP_USERNAME}>"
+        msg['From'] = f"{smtp_from_name} <{smtp_username}>"
         msg['To'] = ', '.join(recipients)
         msg['Subject'] = f"PV Matériel Loué - {chantier_name} - {date_reception}"
         
@@ -164,9 +172,9 @@ L'équipe Centrale Lyon Conseil
         msg.attach(pdf_attachment)
         
         # Connexion au serveur SMTP et envoi
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
             server.starttls()  # Sécuriser la connexion
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.login(smtp_username, smtp_password)
             server.send_message(msg)
         
         recipients_str = ', '.join(recipients)
@@ -413,16 +421,23 @@ def update_smtp_config():
 def test_smtp_config():
     """Teste la connexion SMTP avec les paramètres configurés."""
     try:
-        if not SMTP_USERNAME or not SMTP_PASSWORD:
+        # Recharger la configuration SMTP depuis le fichier
+        config = load_smtp_config()
+        smtp_server = config.get('smtp_server')
+        smtp_port = config.get('smtp_port')
+        smtp_username = config.get('smtp_username')
+        smtp_password = config.get('smtp_password')
+        
+        if not smtp_username or not smtp_password:
             return jsonify({
                 'success': False,
                 'message': 'Configuration SMTP incomplète'
             }), 400
         
         # Tester la connexion
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
             server.starttls()
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.login(smtp_username, smtp_password)
         
         return jsonify({
             'success': True,
