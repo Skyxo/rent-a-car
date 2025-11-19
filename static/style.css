@@ -290,6 +290,27 @@ body {
     vertical-align: middle;
 }
 
+/* Wrapper pour disposer le bouton photo et la prévisualisation côte à côte */
+.photo-cell-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.photo-preview {
+    flex: 1;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+}
+
+.photo-preview img {
+    max-width: 100%;
+    max-height: 80px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
 /* Responsive pour mobile */
 @media (max-width: 768px) {
     .clc-header h1 {
