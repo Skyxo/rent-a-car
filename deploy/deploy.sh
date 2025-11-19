@@ -31,7 +31,14 @@ sudo mkdir -p $APP_DIR
 sudo mkdir -p $LOG_DIR
 sudo chown -R $USER:$USER $APP_DIR
 
-echo "→ Clone/mise à jour du code..."
+echo "→ Copie des fichiers de l'application..."
+# Si on est dans /tmp/pv-materiel-deploy, copier vers $APP_DIR
+if [ "$PWD" = "/tmp/pv-materiel-deploy" ]; then
+    echo "Copie depuis /tmp/pv-materiel-deploy vers $APP_DIR..."
+    sudo cp -r /tmp/pv-materiel-deploy/* $APP_DIR/
+    sudo chown -R $USER:$USER $APP_DIR
+fi
+
 echo "→ Vérification du code..."
 if [ ! -f "$APP_DIR/server.py" ]; then
     echo "❌ Erreur: Les fichiers de l'application ne sont pas présents"
