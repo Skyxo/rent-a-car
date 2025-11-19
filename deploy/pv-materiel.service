@@ -1,5 +1,5 @@
 [Unit]
-Description=PV Matériel Loué - Centrale Lyon Conseil
+Description=PV Matériel Loué - France Montage Briand
 After=network.target
 
 [Service]
