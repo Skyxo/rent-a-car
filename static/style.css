@@ -238,14 +238,22 @@ body {
     min-width: 52px;
     min-height: 52px;
     line-height: 1;
+    overflow: hidden;
 }
 
+/* Masquer le texte "Aucun fichier choisi" */
 .form-control[type="file"]::file-selector-button {
+    display: none;
+}
+
+.form-control[type="file"]::after {
+    content: "";
     display: none;
 }
 
 .form-control[type="file"]::before {
     content: "📷";
+    display: block;
 }
 
 .form-control[type="file"]:hover {
