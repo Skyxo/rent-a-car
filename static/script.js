@@ -286,9 +286,6 @@ function debounce(func, wait) {
 //     // Fonctionnalité désactivée à la demande
 // });
 
-if (false) {
-});
-
 /**
  * Détection de la rotation de l'écran (mobile/tablette)
  * Redimensionne les canvas pour éviter les déformations
