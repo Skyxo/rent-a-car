@@ -290,6 +290,32 @@ body {
     vertical-align: middle;
 }
 
+/* Wrapper pour le bouton photo et sa prévisualisation côte à côte */
+.photo-cell-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+}
+
+.photo-preview {
+    max-width: 80px;
+    max-height: 80px;
+    overflow: hidden;
+}
+
+.photo-preview img {
+    max-width: 100%;
+    max-height: 80px;
+    width: auto;
+    height: auto;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+/* Responsive pour mobile */
+
 /* Wrapper pour disposer le bouton photo et la prévisualisation côte à côte */
 .photo-cell-wrapper {
     display: flex;
