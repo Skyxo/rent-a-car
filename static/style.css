@@ -227,21 +227,23 @@ body {
     border: 2px solid var(--clc-navy);
     background-color: var(--clc-light-gray);
     border-radius: 8px;
-    padding: 0.75rem;
-    font-size: 1.5rem;
-    color: var(--clc-navy);
+    padding: 0;
+    font-size: 0;
+    color: transparent;
     transition: all 0.2s ease;
     text-align: center;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin: 0 auto;
-    width: fit-content;
-    min-width: 52px;
-    min-height: 52px;
+    width: 52px;
+    height: 52px;
     line-height: 1;
     overflow: hidden;
+    position: relative;
 }
 
-/* Masquer le texte "Aucun fichier choisi" */
+/* Masquer complètement le texte du fichier */
 .form-control[type="file"]::file-selector-button {
     display: none;
 }
@@ -251,15 +253,29 @@ body {
     display: none;
 }
 
+/* Afficher uniquement l'icône */
 .form-control[type="file"]::before {
     content: "📷";
-    display: block;
+    font-size: 1.5rem;
+    color: var(--clc-navy);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
 }
 
 .form-control[type="file"]:hover {
     background-color: var(--clc-navy);
-    color: white;
     transform: scale(1.05);
+}
+
+.form-control[type="file"]:hover::before {
+    color: white;
 }
 
 .form-control[type="file"]:focus {
@@ -301,10 +317,12 @@ body {
     
     /* Adapter la taille du bouton photo sur mobile */
     .form-control[type="file"] {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .form-control[type="file"]::before {
         font-size: 1.3rem;
-        padding: 0.6rem;
-        min-width: 48px;
-        min-height: 48px;
     }
 }
 
@@ -792,10 +810,12 @@ body {
     
     /* Adapter la taille du bouton photo sur très petit écran */
     .form-control[type="file"] {
+        width: 42px;
+        height: 42px;
+    }
+    
+    .form-control[type="file"]::before {
         font-size: 1.1rem;
-        padding: 0.5rem;
-        min-width: 42px;
-        min-height: 42px;
     }
     
     /* Badges */
@@ -851,10 +871,12 @@ body {
     
     /* Taille optimale pour les boutons photo sur tactile */
     .form-control[type="file"] {
+        width: 54px;
+        height: 54px;
+    }
+    
+    .form-control[type="file"]::before {
         font-size: 1.4rem;
-        min-width: 54px;
-        min-height: 54px;
-        padding: 0.7rem;
     }
     
     /* Signatures - Zone tactile optimale */
