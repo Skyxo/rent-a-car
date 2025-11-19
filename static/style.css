@@ -221,30 +221,51 @@ body {
     border-radius: 4px;
 }
 
-/* Amélioration des boutons de fichier */
+/* Amélioration des boutons de fichier - Style icône caméra */
 .form-control[type="file"] {
-    padding: 0.5rem;
-    font-size: 0.95rem;
+    position: relative;
     cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    display: block;
+    margin: 0 auto;
+    width: fit-content;
 }
 
-.form-control[type="file"]::file-selector-button {
-    padding: 0.5rem 1rem;
-    margin-right: 1rem;
+.form-control[type="file"]::before {
+    content: "\f030"; /* Font Awesome camera icon */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 1.5rem;
+    color: var(--clc-navy);
+    background-color: var(--clc-light-gray);
+    border: 2px solid var(--clc-navy);
+    border-radius: 8px;
+    padding: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    min-height: 52px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.form-control[type="file"]:hover::before {
     background-color: var(--clc-navy);
     color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    white-space: nowrap;
+    transform: scale(1.05);
 }
 
-.form-control[type="file"]::file-selector-button:hover {
-    background-color: #002952;
+.form-control[type="file"]:focus::before {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(0, 61, 122, 0.25);
+}
+
+.form-control[type="file"]::-webkit-file-upload-button {
+    display: none;
 }
 
 /* Centrer verticalement les boutons photo dans leurs cellules */
@@ -279,16 +300,12 @@ body {
         padding: 0.4rem;
     }
     
-    /* Améliorer les boutons de fichier sur mobile */
-    .form-control[type="file"] {
-        font-size: 0.85rem;
-        padding: 0.4rem;
-    }
-    
-    .form-control[type="file"]::file-selector-button {
-        padding: 0.4rem 0.8rem;
-        margin-right: 0.5rem;
-        font-size: 0.8rem;
+    /* Adapter la taille de l'icône caméra sur mobile */
+    .form-control[type="file"]::before {
+        font-size: 1.2rem;
+        min-width: 48px;
+        min-height: 48px;
+        padding: 0.6rem;
     }
 }
 
@@ -774,6 +791,14 @@ body {
         max-height: 60px !important;
     }
     
+    /* Adapter la taille de l'icône caméra sur très petit écran */
+    .form-control[type="file"]::before {
+        font-size: 1rem;
+        min-width: 42px;
+        min-height: 42px;
+        padding: 0.5rem;
+    }
+    
     /* Badges */
     .badge {
         font-size: 0.75rem;
@@ -823,6 +848,12 @@ body {
     /* Amélioration des inputs pour le toucher */
     input, select, textarea {
         font-size: 16px !important; /* Évite le zoom automatique sur iOS */
+    }
+    
+    /* Taille optimale pour les boutons caméra sur tactile */
+    .form-control[type="file"]::before {
+        min-width: 54px;
+        min-height: 54px;
     }
     
     /* Signatures - Zone tactile optimale */
