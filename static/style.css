@@ -211,6 +211,10 @@ body {
     padding: 5px;
     position: relative;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 210px;
 }
 
 .signature-canvas {
@@ -219,16 +223,51 @@ body {
     touch-action: none;
     cursor: crosshair;
     border-radius: 4px;
+    display: block;
 }
 
-/* Amélioration des boutons de fichier */
+/* Amélioration des boutons de fichier - Style icône caméra */
 .form-control[type="file"] {
-    padding: 0.5rem;
-    font-size: 0.95rem;
+    position: relative;
     cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 0;
+    padding: 0;
+    border: none;
+    background: none;
+}
+
+.form-control[type="file"]::before {
+    content: "\f030"; /* Font Awesome camera icon */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 1.5rem;
+    color: var(--clc-navy);
+    background-color: var(--clc-light-gray);
+    border: 2px solid var(--clc-navy);
+    border-radius: 8px;
+    padding: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 52px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.form-control[type="file"]:hover::before {
+    background-color: var(--clc-navy);
+    color: white;
+    transform: scale(1.05);
+}
+
+.form-control[type="file"]:focus::before {
+    box-shadow: 0 0 0 0.2rem rgba(0, 61, 122, 0.25);
+}
+
+/* Masquer le texte du fichier sélectionné */
+.form-control[type="file"]::-webkit-file-upload-button {
+    display: none;
 }
 
 .form-control[type="file"]::file-selector-button {
@@ -598,10 +637,19 @@ body {
     /* Signatures - taille réduite sur mobile */
     .signature-container {
         max-height: 150px;
+        min-height: 150px;
     }
     
     .signature-canvas {
-        max-height: 150px;
+        max-height: 140px;
+        height: 140px;
+    }
+    
+    /* Boutons photo - taille réduite */
+    .form-control[type="file"]::before {
+        font-size: 1.2rem;
+        padding: 0.6rem;
+        min-height: 48px;
     }
     
     /* Footer */
@@ -729,10 +777,19 @@ body {
     /* Signatures encore plus compactes */
     .signature-container {
         max-height: 120px;
+        min-height: 120px;
     }
     
     .signature-canvas {
-        max-height: 120px;
+        max-height: 110px;
+        height: 110px;
+    }
+    
+    /* Boutons photo très compacts */
+    .form-control[type="file"]::before {
+        font-size: 1rem;
+        padding: 0.5rem;
+        min-height: 42px;
     }
     
     .btn-sm {
@@ -783,9 +840,14 @@ body {
 
 /* Orientation paysage sur mobile */
 @media (max-height: 500px) and (orientation: landscape) {
-    .signature-container,
-    .signature-canvas {
+    .signature-container {
         max-height: 100px;
+        min-height: 100px;
+    }
+    
+    .signature-canvas {
+        max-height: 90px;
+        height: 90px;
     }
     
     .clc-header {
