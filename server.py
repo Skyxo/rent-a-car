@@ -1,6 +1,6 @@
 """
 Application Flask pour la génération de Procès-Verbaux de Matériel Loué
-Centrale Lyon Conseil
+France Montage Briand
 
 Architecture stateless avec génération PDF en mémoire et envoi SMTP.
 """
@@ -47,7 +47,7 @@ def load_smtp_config():
         'smtp_port': int(os.environ.get('SMTP_PORT', '587')),
         'smtp_username': os.environ.get('SMTP_USERNAME', ''),
         'smtp_password': os.environ.get('SMTP_PASSWORD', ''),
-        'smtp_from_name': os.environ.get('SMTP_FROM_NAME', 'Centrale Lyon Conseil')
+        'smtp_from_name': os.environ.get('SMTP_FROM_NAME', 'France Montage Briand')
     }
 
 def save_smtp_config(config):
@@ -158,10 +158,10 @@ Veuillez trouver ci-joint le Procès-Verbal de matériel loué pour le chantier 
 
 Date de réception : {date_reception}
 
-Ce document a été généré automatiquement par l'application de gestion Centrale Lyon Conseil.
+Ce document a été généré automatiquement par l'application de gestion France Montage Briand.
 
 Cordialement,
-L'équipe Centrale Lyon Conseil
+L'équipe France Montage Briand
         """
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
         
@@ -283,8 +283,8 @@ def submit():
             flash('Le chantier est obligatoire', 'danger')
             return redirect(url_for('index'))
         
-        if not form_data['email_destinataire']:
-            flash('L\'email du destinataire est obligatoire', 'danger')
+        if not form_data.get('email_conducteur'):
+            flash('L\'email du conducteur de travaux est obligatoire', 'danger')
             return redirect(url_for('index'))
         
         # Optimiser les signatures si présentes
@@ -313,10 +313,8 @@ def submit():
         # Générer le PDF en mémoire avec WeasyPrint
         pdf_bytes = HTML(string=html_content).write_pdf()
         
-        # Préparer la liste des destinataires
-        recipients = [form_data['email_destinataire']]
-        if form_data.get('email_conducteur'):
-            recipients.append(form_data['email_conducteur'])
+        # Préparer la liste des destinataires (seulement le conducteur de travaux)
+        recipients = [form_data['email_conducteur']]
         
         # Envoyer le PDF par email
         success, message = send_email_with_pdf(

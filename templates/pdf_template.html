@@ -28,7 +28,7 @@
         .header {
             text-align: center;
             margin-bottom: 20px;
-            border-bottom: 3px solid #001632;
+            border-bottom: 3px solid #003d7a;
             padding-bottom: 15px;
         }
         
@@ -39,16 +39,16 @@
         }
         
         h1 {
-            color: #001632;
+            color: #003d7a;
             font-size: 18pt;
             margin-top: 10px;
         }
         
         h2 {
-            color: #CB1F1F;
+            color: #ff6b35;
             font-size: 12pt;
             margin: 15px 0 10px 0;
-            border-bottom: 2px solid #CB1F1F;
+            border-bottom: 2px solid #ff6b35;
             padding-bottom: 3px;
         }
         
@@ -64,7 +64,7 @@
         .info-label {
             font-weight: bold;
             width: 150px;
-            color: #001632;
+            color: #003d7a;
         }
         
         .info-value {
@@ -79,12 +79,12 @@
         }
         
         th {
-            background-color: #001632;
+            background-color: #003d7a;
             color: white;
             padding: 8px;
             text-align: left;
             font-weight: bold;
-            border: 1px solid #001632;
+            border: 1px solid #003d7a;
         }
         
         td {
@@ -114,14 +114,14 @@
         
         .signature-box {
             width: 48%;
-            border: 2px solid #001632;
+            border: 2px solid #003d7a;
             padding: 10px;
             min-height: 120px;
         }
         
         .signature-title {
             font-weight: bold;
-            color: #CB1F1F;
+            color: #ff6b35;
             margin-bottom: 10px;
             text-align: center;
         }
@@ -184,13 +184,13 @@
         
         .date-box {
             width: 48%;
-            border: 1px solid #001632;
+            border: 1px solid #003d7a;
             padding: 10px;
             background-color: #f8f9fa;
         }
         
         .date-box h3 {
-            color: #CB1F1F;
+            color: #ff6b35;
             font-size: 11pt;
             margin-bottom: 8px;
         }
@@ -205,7 +205,7 @@
         }
         
         .observations-box {
-            border: 1px solid #001632;
+            border: 1px solid #003d7a;
             padding: 10px;
             margin: 10px 0;
             min-height: 60px;
@@ -216,9 +216,10 @@
 <body>
     <!-- En-tête -->
     <div class="header">
-        <img src="https://www.centralelyonconseil.fr/wp-content/uploads/2023/10/logo_horizontal_avectexte.png" 
-             alt="Centrale Lyon Conseil" 
-             class="logo">
+        <div style="text-align: center; margin-bottom: 15px;">
+            <h1 style="font-size: 28pt; margin: 0; color: #003d7a; font-weight: 900; letter-spacing: 2px;">FRANCE MONTAGE BRIAND</h1>
+            <p style="font-size: 12pt; margin: 5px 0 0 0; color: #ff6b35; font-weight: 600;">Montage - Location - Maintenance</p>
+        </div>
         <h1>PROCÈS-VERBAL DE MATÉRIEL LOUÉ</h1>
     </div>
 
@@ -422,7 +423,7 @@
     <!-- Photos - Aspect Extérieur -->
     {% if photo_carrosserie or photo_eclairage or photo_pneumatiques or photo_panier or photo_flexibles or photo_commandes %}
     <div class="photos-section">
-        <h3 style="color: #001632; font-size: 10pt; margin-bottom: 8px;">📷 Photos - Aspect Extérieur</h3>
+        <h3 style="color: #003d7a; font-size: 10pt; margin-bottom: 8px;">📷 Photos - Aspect Extérieur</h3>
         <div class="photos-grid">
             {% if photo_carrosserie %}
             <div class="photo-item">
@@ -573,7 +574,7 @@
     <!-- Photos - Fonctionnement -->
     {% if photo_conformite or photo_mobilites or photo_nacelles or photo_securite %}
     <div class="photos-section">
-        <h3 style="color: #001632; font-size: 10pt; margin-bottom: 8px;">📷 Photos - Fonctionnement</h3>
+        <h3 style="color: #003d7a; font-size: 10pt; margin-bottom: 8px;">📷 Photos - Fonctionnement</h3>
         <div class="photos-grid">
             {% if photo_conformite %}
             <div class="photo-item">
@@ -627,15 +628,19 @@
                 <td style="text-align: center;">
                     {% if fuite_moteur_reception == 'oui' %}
                         <span class="status-defectueux">⚠ OUI</span>
-                    {% else %}
+                    {% elif fuite_moteur_reception == 'non' %}
                         <span class="status-bon">NON</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
                     {% endif %}
                 </td>
                 <td style="text-align: center;">
                     {% if fuite_moteur_retour == 'oui' %}
                         <span class="status-defectueux">⚠ OUI</span>
-                    {% else %}
+                    {% elif fuite_moteur_retour == 'non' %}
                         <span class="status-bon">NON</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
                     {% endif %}
                 </td>
             </tr>
@@ -644,15 +649,19 @@
                 <td style="text-align: center;">
                     {% if fuite_hydraulique_reception == 'oui' %}
                         <span class="status-defectueux">⚠ OUI</span>
-                    {% else %}
+                    {% elif fuite_hydraulique_reception == 'non' %}
                         <span class="status-bon">NON</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
                     {% endif %}
                 </td>
                 <td style="text-align: center;">
                     {% if fuite_hydraulique_retour == 'oui' %}
                         <span class="status-defectueux">⚠ OUI</span>
-                    {% else %}
+                    {% elif fuite_hydraulique_retour == 'non' %}
                         <span class="status-bon">NON</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
                     {% endif %}
                 </td>
             </tr>
@@ -661,15 +670,19 @@
                 <td style="text-align: center;">
                     {% if fuite_gasoil_reception == 'oui' %}
                         <span class="status-defectueux">⚠ OUI</span>
-                    {% else %}
+                    {% elif fuite_gasoil_reception == 'non' %}
                         <span class="status-bon">NON</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
                     {% endif %}
                 </td>
                 <td style="text-align: center;">
                     {% if fuite_gasoil_retour == 'oui' %}
                         <span class="status-defectueux">⚠ OUI</span>
-                    {% else %}
+                    {% elif fuite_gasoil_retour == 'non' %}
                         <span class="status-bon">NON</span>
+                    {% else %}
+                        <span class="status-empty">-</span>
                     {% endif %}
                 </td>
             </tr>
@@ -679,7 +692,7 @@
     <!-- Photos - Fuites -->
     {% if photo_fuite_reception or photo_fuite_retour %}
     <div class="photos-section">
-        <h3 style="color: #001632; font-size: 10pt; margin-bottom: 8px;">📷 Photos - Fuites</h3>
+        <h3 style="color: #003d7a; font-size: 10pt; margin-bottom: 8px;">📷 Photos - Fuites</h3>
         <div class="photos-grid">
             {% if photo_fuite_reception %}
             <div class="photo-item">
@@ -714,7 +727,7 @@
     <!-- Photos - Observations -->
     {% if photo_observation_reception or photo_observation_retour %}
     <div class="photos-section">
-        <h3 style="color: #001632; font-size: 10pt; margin-bottom: 8px;">📷 Photos - Observations</h3>
+        <h3 style="color: #003d7a; font-size: 10pt; margin-bottom: 8px;">📷 Photos - Observations</h3>
         <div class="photos-grid">
             {% if photo_observation_reception %}
             <div class="photo-item">
@@ -757,7 +770,7 @@
     <!-- Footer -->
     <div class="footer">
         <p>Document généré automatiquement le {{ date_generation }}</p>
-        <p>Centrale Lyon Conseil - École Centrale de Lyon</p>
+        <p>France Montage Briand - Montage, Location et Maintenance de Matériel</p>
     </div>
 </body>
 </html>

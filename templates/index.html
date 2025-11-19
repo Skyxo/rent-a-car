@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <meta name="description" content="Application de génération de Procès-Verbaux de Matériel Loué - Centrale Lyon Conseil">
-    <meta name="theme-color" content="#001632">
+    <meta name="description" content="Application de génération de Procès-Verbaux de Matériel Loué - France Montage Briand">
+    <meta name="theme-color" content="#003d7a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>PV Matériel Loué - Centrale Lyon Conseil</title>
+    <title>PV Matériel Loué - France Montage Briand</title>
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -22,10 +22,11 @@
     <!-- Header avec logo -->
     <header class="clc-header">
         <div class="container">
-            <img src="https://www.centralelyonconseil.fr/wp-content/uploads/2023/10/logo_horizontal_avectexte.png" 
-                 alt="Centrale Lyon Conseil" 
-                 class="clc-logo">
-            <h1 class="text-center mt-3 mb-0">Procès-Verbal de Matériel Loué</h1>
+            <div class="fmb-logo-text">
+                <h1 class="fmb-title">FRANCE MONTAGE BRIAND</h1>
+                <p class="fmb-subtitle">Montage - Location - Maintenance</p>
+            </div>
+            <h2 class="text-center mt-3 mb-0">Procès-Verbal de Matériel Loué</h2>
         </div>
     </header>
 
@@ -93,18 +94,14 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <label for="chantier" class="form-label">Chantier <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="chantier" name="chantier" required>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="email_destinataire" class="form-label">Email destinataire <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control" id="email_destinataire" name="email_destinataire" required>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="email_conducteur" class="form-label">Email conducteur de travaux</label>
-                            <input type="email" class="form-control" id="email_conducteur" name="email_conducteur" placeholder="Copie automatique">
-                            <small class="text-muted">Recevra une copie du rapport</small>
+                        <div class="col-md-6 mb-3">
+                            <label for="email_conducteur" class="form-label">Email conducteur de travaux <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="email_conducteur" name="email_conducteur" required>
+                            <small class="text-muted">Le PV sera envoyé à cette adresse</small>
                         </div>
                     </div>
                     

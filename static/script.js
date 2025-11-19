@@ -1,6 +1,6 @@
 /**
  * Script JavaScript pour l'application PV Matériel Loué
- * Centrale Lyon Conseil
+ * France Montage Briand
  * 
  * Fonctionnalités :
  * - Gestion des signatures électroniques avec SignaturePad
@@ -279,20 +279,14 @@ function debounce(func, wait) {
 }
 
 /**
- * Confirmation avant de quitter la page avec des données non sauvegardées
+ * Confirmation avant de quitter la page - DÉSACTIVÉ
+ * L'utilisateur peut librement quitter/recharger sans confirmation
  */
-window.addEventListener('beforeunload', function(event) {
-    // Vérifier si des signatures sont présentes mais non soumises
-    if (signaturePadReception && !signaturePadReception.isEmpty() ||
-        signaturePadRetour && !signaturePadRetour.isEmpty()) {
-        
-        const formSubmitted = sessionStorage.getItem('formSubmitted');
-        if (!formSubmitted) {
-            event.preventDefault();
-            event.returnValue = 'Vous avez des signatures non soumises. Voulez-vous vraiment quitter ?';
-            return event.returnValue;
-        }
-    }
+// window.addEventListener('beforeunload', function(event) {
+//     // Fonctionnalité désactivée à la demande
+// });
+
+if (false) {
 });
 
 /**

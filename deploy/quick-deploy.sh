@@ -26,7 +26,6 @@ echo "📋 Étape 1/5: Configuration"
 echo "─────────────────────────────────────────────────────────────"
 echo ""
 read -p "Entrez l'utilisateur SSH du serveur [root]: " SERVER_USER
-SERVER_USER=${SERVER_USER:-root}
 echo ""
 
 echo "📡 Étape 2/5: Test de connexion au serveur $SERVER_IP"

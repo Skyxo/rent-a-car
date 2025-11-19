@@ -4,11 +4,10 @@
  * Conforme à la charte graphique de l'École Centrale de Lyon
  */
 
-/* Variables CSS pour la charte graphique */
+/* Variables CSS pour France Montage Briand */
 :root {
-    --clc-red: #CB1F1F;
-    --clc-navy: #001632;
-    --clc-blue-matisse: #1D7BAC;
+    --clc-navy: #003d7a;  /* Bleu France Montage Briand */
+    --clc-red: #ff6b35;   /* Orange France Montage Briand */
     --clc-light-gray: #f8f9fa;
     --clc-border: #dee2e6;
 }
@@ -21,18 +20,41 @@ body {
 
 /* Header */
 .clc-header {
-    background: linear-gradient(135deg, var(--clc-navy) 0%, var(--clc-blue-matisse) 100%);
+    background: linear-gradient(135deg, var(--clc-navy) 0%, #002a5c 100%);
     color: white;
     padding: 2rem 0;
     margin-bottom: 2rem;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.clc-header h1 {
+.clc-header h1,
+.clc-header h2 {
     color: white;
     font-size: 1.8rem;
     font-weight: 300;
     letter-spacing: 0.5px;
+}
+
+.fmb-logo-text {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.fmb-title {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: white;
+    letter-spacing: 2px;
+    margin: 0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.fmb-subtitle {
+    font-size: 1.1rem;
+    color: var(--clc-red);
+    font-weight: 600;
+    margin: 0.5rem 0 0 0;
+    letter-spacing: 1px;
 }
 
 .clc-logo {
@@ -186,7 +208,7 @@ body {
     border: 3px solid var(--clc-navy);
     border-radius: 8px;
     background-color: white;
-    padding: 10px;
+    padding: 5px;
     position: relative;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
