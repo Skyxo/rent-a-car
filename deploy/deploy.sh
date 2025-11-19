@@ -32,15 +32,15 @@ sudo mkdir -p $LOG_DIR
 sudo chown -R $USER:$USER $APP_DIR
 
 echo "→ Clone/mise à jour du code..."
-if [ -d "$APP_DIR/.git" ]; then
-    cd $APP_DIR
-    git pull origin main
-else
-    git clone $REPO_URL $APP_DIR
-    cd $APP_DIR
+echo "→ Vérification du code..."
+if [ ! -f "$APP_DIR/server.py" ]; then
+    echo "❌ Erreur: Les fichiers de l'application ne sont pas présents"
+    echo "Le script quick-deploy.sh doit d'abord transférer les fichiers"
+    exit 1
 fi
 
 echo "→ Création de l'environnement virtuel Python..."
+cd $APP_DIR
 python3 -m venv venv
 source venv/bin/activate
 
