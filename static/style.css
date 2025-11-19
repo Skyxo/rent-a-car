@@ -255,7 +255,9 @@ body {
 
 /* Afficher uniquement l'icône */
 .form-control[type="file"]::before {
-    content: "📷";
+    content: "\f030";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
     font-size: 1.5rem;
     color: var(--clc-navy);
     display: flex;
