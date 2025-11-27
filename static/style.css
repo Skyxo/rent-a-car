@@ -1,13 +1,13 @@
 /* 
  * Feuille de style pour l'application PV Matériel Loué
- * Centrale Lyon Conseil
- * Conforme à la charte graphique de l'École Centrale de Lyon
+ * France Montage - Groupe Briand
+ * Conforme à la charte graphique du Groupe Briand
  */
 
-/* Variables CSS pour France Montage Briand */
+/* Variables CSS pour Groupe Briand */
 :root {
-    --clc-navy: #003d7a;  /* Bleu France Montage Briand */
-    --clc-red: #ff6b35;   /* Orange France Montage Briand */
+    --clc-navy: #16283E;  /* Bleu Nuit Groupe Briand */
+    --clc-red: #FF0043;   /* Rouge Vif Groupe Briand */
     --clc-light-gray: #f8f9fa;
     --clc-border: #dee2e6;
 }
@@ -18,26 +18,57 @@ body {
     background-color: #f5f5f5;
 }
 
+/* Réduction des espacements globaux */
+.mb-3 {
+    margin-bottom: 0.75rem !important;
+}
+
+.mb-4 {
+    margin-bottom: 1rem !important;
+}
+
+.mt-3 {
+    margin-top: 0.75rem !important;
+}
+
+.mt-4 {
+    margin-top: 1rem !important;
+}
+
+.py-3 {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+}
+
+h5 {
+    margin-bottom: 0.5rem !important;
+}
+
+.form-label {
+    margin-bottom: 0.25rem !important;
+}
+
 /* Header */
 .clc-header {
     background: linear-gradient(135deg, var(--clc-navy) 0%, #002a5c 100%);
     color: white;
-    padding: 2rem 0;
-    margin-bottom: 2rem;
+    padding: 1rem 0;
+    margin-bottom: 1rem;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .clc-header h1,
 .clc-header h2 {
     color: white;
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     font-weight: 300;
     letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
 }
 
 .fmb-logo-text {
     text-align: center;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
 }
 
 .fmb-title {
@@ -69,7 +100,7 @@ body {
 .card {
     border: none;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     border-radius: 8px;
     overflow: hidden;
 }
@@ -78,8 +109,8 @@ body {
     background-color: var(--clc-navy);
     color: white;
     font-weight: 600;
-    font-size: 1.1rem;
-    padding: 1rem 1.25rem;
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
     border: none;
 }
 
@@ -89,7 +120,7 @@ body {
 }
 
 .card-body {
-    padding: 1.5rem;
+    padding: 1rem;
 }
 
 /* Texte de couleur institutionnelle */
@@ -118,8 +149,8 @@ body {
 
 .form-control:focus,
 .form-select:focus {
-    border-color: var(--clc-blue-matisse);
-    box-shadow: 0 0 0 0.2rem rgba(29, 123, 172, 0.15);
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
 }
 
 /* Tables d'inspection */
@@ -211,14 +242,18 @@ body {
     padding: 5px;
     position: relative;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    max-width: 100%;
 }
 
 .signature-canvas {
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     height: 200px;
     touch-action: none;
     cursor: crosshair;
     border-radius: 4px;
+    display: block;
 }
 
 /* Amélioration des boutons de fichier - Style icône uniquement */
@@ -293,15 +328,31 @@ body {
 /* Wrapper pour le bouton photo et sa prévisualisation côte à côte */
 .photo-cell-wrapper {
     display: flex;
+    flex-direction: column;
     align-items: center;
     gap: 10px;
+}
+
+.multi-photo-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
     justify-content: center;
+}
+
+.photo-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
 }
 
 .photo-preview {
     max-width: 80px;
     max-height: 80px;
     overflow: hidden;
+    position: relative;
 }
 
 .photo-preview img {
@@ -314,27 +365,24 @@ body {
     border: 1px solid #ddd;
 }
 
-/* Responsive pour mobile */
-
-/* Wrapper pour disposer le bouton photo et la prévisualisation côte à côte */
-.photo-cell-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+.photo-preview .remove-photo-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    font-size: 0.7rem;
+    line-height: 1;
+    border-radius: 50%;
+    background: rgba(220, 53, 69, 0.9);
+    border: none;
+    color: white;
+    cursor: pointer;
 }
 
-.photo-preview {
-    flex: 1;
-    min-height: 52px;
-    display: flex;
-    align-items: center;
-}
-
-.photo-preview img {
-    max-width: 100%;
-    max-height: 80px;
-    border-radius: 4px;
-    border: 1px solid #ddd;
+.photo-preview .remove-photo-btn:hover {
+    background: rgb(220, 53, 69);
 }
 
 /* Responsive pour mobile */
@@ -349,6 +397,7 @@ body {
     
     .signature-canvas {
         height: 150px;
+        max-width: 100%;
     }
     
     .btn-clc-red {
@@ -473,7 +522,12 @@ body {
 
 /* Amélioration du contraste pour accessibilité */
 ::selection {
-    background-color: var(--clc-blue-matisse);
+    background-color: #0d6efd;
+    color: white;
+}
+
+::-moz-selection {
+    background-color: #0d6efd;
     color: white;
 }
 
@@ -503,7 +557,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--clc-blue-matisse);
+    background: #0d6efd;
     border-radius: 5px;
 }
 
@@ -560,6 +614,222 @@ body {
 #sendEmailBtn small {
     font-weight: normal;
     opacity: 0.9;
+}
+
+/* ============================================
+   INTERFACE GESTION DES PV - CARTES
+   ============================================ */
+
+/* Gradient pour header */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+}
+
+/* Liste scrollable avec hauteur max */
+.pv-list-scrollable {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 5px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background: #fafafa;
+    padding: 1rem;
+    position: relative;
+}
+
+.pv-list-scrollable.empty {
+    background: white;
+    border: 2px dashed #e9ecef;
+}
+
+/* Indicateur de scroll */
+.pv-list-scrollable::after {
+    content: '';
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: linear-gradient(to bottom, transparent, #fafafa);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.pv-list-scrollable.has-scroll::after {
+    opacity: 1;
+}
+
+/* Scrollbar personnalisée pour la liste des PV */
+.pv-list-scrollable::-webkit-scrollbar {
+    width: 8px;
+}
+
+.pv-list-scrollable::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.pv-list-scrollable::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.pv-list-scrollable::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Section de recherche */
+#pvSearchSection {
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 200px;
+    }
+}
+
+#pvSearchSection.collapsed {
+    display: none;
+}
+
+/* Cartes PV individuelles */
+.pv-card {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background: white;
+}
+
+.pv-card:last-child {
+    margin-bottom: 0;
+}
+
+.pv-card:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
+    transform: translateY(-2px);
+    z-index: 1;
+}
+
+.pv-card.selected {
+    border-color: #0d6efd;
+    background-color: #f8f9ff;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+.pv-card.hidden {
+    display: none;
+}
+
+/* Mode compact pour beaucoup de PV */
+.pv-list-scrollable.compact .pv-card {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.pv-list-scrollable.compact .pv-card-title {
+    font-size: 1rem;
+}
+
+.pv-list-scrollable.compact .pv-card-meta {
+    font-size: 0.8rem;
+}
+
+.pv-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 0.5rem;
+}
+
+.pv-card-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #212529;
+    margin: 0;
+}
+
+.pv-card-status {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.pv-card-status.draft {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.pv-card-status.sent {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.pv-card-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+}
+
+.pv-card-meta i {
+    width: 16px;
+    text-align: center;
+}
+
+.pv-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.pv-card-actions .btn {
+    flex: 1;
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+}
+
+/* Badge compteur */
+#pvCountBadge {
+    font-size: 0.875rem;
+    padding: 0.35rem 0.65rem;
+}
+
+/* Boutons d'action rapide */
+.btn-outline-primary:hover,
+.btn-outline-info:hover,
+.btn-outline-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Animation au survol des icônes */
+.btn i {
+    transition: transform 0.2s ease;
+}
+
+.btn:hover i {
+    transform: scale(1.1);
+}
+
+/* Liste vide */
+#pvListContainer .text-muted {
+    transition: opacity 0.3s ease;
 }
 
 /* Responsive gap utility for older Bootstrap */
@@ -626,7 +896,28 @@ body {
     
     main.container {
         margin-top: 1rem !important;
-        margin-bottom: 1rem !important;
+    }
+    
+    /* Cartes PV en mobile */
+    .pv-card {
+        padding: 0.75rem;
+    }
+    
+    .pv-card-title {
+        font-size: 1rem;
+    }
+    
+    .pv-card-meta {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .pv-card-actions {
+        flex-direction: column;
+    }
+    
+    .pv-card-actions .btn {
+        width: 100%;
     }
     
     /* Cards */
@@ -686,10 +977,14 @@ body {
     /* Signatures - taille réduite sur mobile */
     .signature-container {
         max-height: 150px;
+        overflow: hidden !important;
+        max-width: 100% !important;
     }
     
     .signature-canvas {
         max-height: 150px;
+        width: 100% !important;
+        max-width: 100% !important;
     }
     
     /* Footer */

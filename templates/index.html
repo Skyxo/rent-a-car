@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <meta name="description" content="Application de génération de Procès-Verbaux de Matériel Loué - France Montage Briand">
     <meta name="theme-color" content="#003d7a">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>PV Matériel Loué - France Montage Briand</title>
@@ -23,14 +24,13 @@
     <header class="clc-header">
         <div class="container">
             <div class="fmb-logo-text">
-                <h1 class="fmb-title">FRANCE MONTAGE BRIAND</h1>
-                <p class="fmb-subtitle">Montage - Location - Maintenance</p>
+                <img src="{{ url_for('static', filename='logo_inverse.png') }}" alt="France Montage - Groupe Briand" style="max-width: 100%; width: 800px; height: auto; display: block; margin: 0 auto;">
             </div>
-            <h2 class="text-center mt-3 mb-0">Procès-Verbal de Matériel Loué</h2>
+            <h2 class="text-center mt-1 mb-0">Procès-Verbal de Matériel Loué</h2>
         </div>
     </header>
 
-    <main class="container my-5">
+    <main class="container my-3">
         <!-- Messages Flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -50,37 +50,98 @@
             </button>
         </div>
 
-        <!-- Section de gestion des PV sauvegardés -->
-        <div class="card mb-4 border-primary">
-            <div class="card-header bg-primary text-white">
-                <i class="fas fa-folder-open"></i> Gestion des Procès-Verbaux
+        <!-- Section de gestion des PV sauvegardés - Interface améliorée -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-gradient-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-folder-open me-2"></i>Mes Procès-Verbaux</h5>
+                    <button type="button" class="btn btn-light btn-sm" id="newPVBtn">
+                        <i class="fas fa-plus-circle me-1"></i> Nouveau PV
+                    </button>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="row align-items-end">
-                    <div class="col-md-6 mb-3 mb-md-0">
-                        <label for="savedPVSelect" class="form-label">
-                            <i class="fas fa-file-alt"></i> Charger un PV sauvegardé
-                        </label>
-                        <select class="form-select" id="savedPVSelect">
-                            <option value="">-- Nouveau PV --</option>
-                        </select>
-                        <small class="text-muted">Sélectionnez un PV existant pour le modifier ou l'envoyer</small>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-primary" id="loadPVBtn" disabled>
-                                <i class="fas fa-download"></i> Charger
-                            </button>
-                            <button type="button" class="btn btn-outline-danger" id="deletePVBtn" disabled>
-                                <i class="fas fa-trash"></i> Supprimer
-                            </button>
-                            <button type="button" class="btn btn-outline-info" id="newPVBtn">
-                                <i class="fas fa-plus"></i> Nouveau PV
-                            </button>
-                        </div>
+            <div class="card-body p-4">
+                <!-- Statut actuel -->
+                <div class="alert alert-info mb-4 d-flex align-items-center" role="alert">
+                    <i class="fas fa-info-circle fs-4 me-3"></i>
+                    <div class="flex-grow-1">
+                        <strong>Nouveau PV en cours</strong>
+                        <div class="small">Le formulaire est vide et prêt à être rempli</div>
                     </div>
                 </div>
-                <div class="mt-3" id="pvStatusBadge"></div>
+
+                <!-- Actions rapides -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-primary w-100 py-3" id="saveDraftBtnTop">
+                            <i class="fas fa-save fa-2x d-block mb-2"></i>
+                            <strong>Sauvegarder</strong>
+                            <small class="d-block text-muted mt-1">Enregistrer le brouillon</small>
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-info w-100 py-3" id="downloadPVBtnTop">
+                            <i class="fas fa-download fa-2x d-block mb-2"></i>
+                            <strong>Télécharger</strong>
+                            <small class="d-block text-muted mt-1">Générer le PDF</small>
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-success w-100 py-3" id="sendEmailBtnTop">
+                            <i class="fas fa-paper-plane fa-2x d-block mb-2"></i>
+                            <strong>Envoyer</strong>
+                            <small class="d-block text-muted mt-1">Par email</small>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Séparateur -->
+                <hr class="my-4">
+
+                <!-- Section PV sauvegardés -->
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <h6 class="text-muted mb-0">
+                        <i class="fas fa-history me-2"></i>PV Sauvegardés
+                        <span class="badge bg-secondary" id="pvCountBadge">0</span>
+                    </h6>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="togglePVListBtn" title="Afficher/Masquer la liste">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                </div>
+
+                <!-- Barre de recherche et filtre -->
+                <div id="pvSearchSection" class="mb-3">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="pvSearchInput" placeholder="Rechercher un PV (chantier, date...)">
+                        <select class="form-select" id="pvFilterStatus" style="max-width: 150px;">
+                            <option value="">Tous les statuts</option>
+                            <option value="draft">Brouillon</option>
+                            <option value="sent">Envoyé</option>
+                        </select>
+                    </div>
+                    <div class="mt-2 small text-muted">
+                        <span id="pvFilterCount">0</span> PV trouvé(s)
+                    </div>
+                </div>
+
+                <!-- Liste des PV sous forme de cartes avec scroll -->
+                <div id="pvListContainer" class="pv-list-scrollable mb-3">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-folder-open fa-3x mb-3 opacity-50"></i>
+                        <p>Aucun PV sauvegardé</p>
+                        <small>Créez votre premier PV en remplissant le formulaire ci-dessous</small>
+                    </div>
+                </div>
+
+                <!-- Select caché pour compatibilité avec le code existant -->
+                <select class="form-select d-none" id="savedPVSelect">
+                    <option value="">-- Sélectionnez un PV --</option>
+                </select>
+                
+                <div class="d-none" id="pvStatusBadge"></div>
             </div>
         </div>
 
@@ -175,8 +236,9 @@
                                 <tr>
                                     <th>Élément</th>
                                     <th class="text-center">Réception</th>
+                                    <th class="text-center">Photos Réception <i class="fas fa-camera"></i></th>
                                     <th class="text-center">Retour</th>
-                                    <th class="text-center">Photos <i class="fas fa-camera"></i></th>
+                                    <th class="text-center">Photos Retour <i class="fas fa-camera"></i></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -192,6 +254,13 @@
                                         </div>
                                     </td>
                                     <td>
+                                        <div class="photo-cell-wrapper">
+                                            <div class="multi-photo-container" id="photos_carrosserie_reception">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_carrosserie_reception" accept="image/*" data-container="photos_carrosserie_reception" data-field="carrosserie_reception" multiple>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="carrosserie_retour" id="carrosserie_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="carrosserie_retour_bon">Bon</label>
@@ -202,8 +271,9 @@
                                     </td>
                                     <td>
                                         <div class="photo-cell-wrapper">
-                                            <input type="file" class="form-control form-control-sm photo-upload" name="photo_carrosserie" accept="image/*" data-preview="preview_carrosserie">
-                                            <div class="photo-preview" id="preview_carrosserie"></div>
+                                            <div class="multi-photo-container" id="photos_carrosserie_retour">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_carrosserie_retour" accept="image/*" data-container="photos_carrosserie_retour" data-field="carrosserie_retour" multiple>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -220,6 +290,13 @@
                                         </div>
                                     </td>
                                     <td>
+                                        <div class="photo-cell-wrapper">
+                                            <div class="multi-photo-container" id="photos_eclairage_reception">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_eclairage_reception" accept="image/*" data-container="photos_eclairage_reception" data-field="eclairage_reception" multiple>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="eclairage_retour" id="eclairage_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="eclairage_retour_bon">Bon</label>
@@ -230,8 +307,9 @@
                                     </td>
                                     <td>
                                         <div class="photo-cell-wrapper">
-                                            <input type="file" class="form-control form-control-sm photo-upload" name="photo_eclairage" accept="image/*" data-preview="preview_eclairage">
-                                            <div class="photo-preview" id="preview_eclairage"></div>
+                                            <div class="multi-photo-container" id="photos_eclairage_retour">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_eclairage_retour" accept="image/*" data-container="photos_eclairage_retour" data-field="eclairage_retour" multiple>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -248,6 +326,13 @@
                                         </div>
                                     </td>
                                     <td>
+                                        <div class="photo-cell-wrapper">
+                                            <div class="multi-photo-container" id="photos_pneumatiques_reception">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_pneumatiques_reception" accept="image/*" data-container="photos_pneumatiques_reception" data-field="pneumatiques_reception" multiple>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="pneumatiques_retour" id="pneumatiques_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="pneumatiques_retour_bon">Bon</label>
@@ -258,8 +343,9 @@
                                     </td>
                                     <td>
                                         <div class="photo-cell-wrapper">
-                                            <input type="file" class="form-control form-control-sm photo-upload" name="photo_pneumatiques" accept="image/*" data-preview="preview_pneumatiques">
-                                            <div class="photo-preview" id="preview_pneumatiques"></div>
+                                            <div class="multi-photo-container" id="photos_pneumatiques_retour">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_pneumatiques_retour" accept="image/*" data-container="photos_pneumatiques_retour" data-field="pneumatiques_retour" multiple>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -276,6 +362,13 @@
                                         </div>
                                     </td>
                                     <td>
+                                        <div class="photo-cell-wrapper">
+                                            <div class="multi-photo-container" id="photos_panier_reception">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_panier_reception" accept="image/*" data-container="photos_panier_reception" data-field="panier_reception" multiple>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="panier_retour" id="panier_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="panier_retour_bon">Bon</label>
@@ -286,8 +379,9 @@
                                     </td>
                                     <td>
                                         <div class="photo-cell-wrapper">
-                                            <input type="file" class="form-control form-control-sm photo-upload" name="photo_panier" accept="image/*" data-preview="preview_panier">
-                                            <div class="photo-preview" id="preview_panier"></div>
+                                            <div class="multi-photo-container" id="photos_panier_retour">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_panier_retour" accept="image/*" data-container="photos_panier_retour" data-field="panier_retour" multiple>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -304,6 +398,13 @@
                                         </div>
                                     </td>
                                     <td>
+                                        <div class="photo-cell-wrapper">
+                                            <div class="multi-photo-container" id="photos_flexibles_reception">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_flexibles_reception" accept="image/*" data-container="photos_flexibles_reception" data-field="flexibles_reception" multiple>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="flexibles_retour" id="flexibles_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="flexibles_retour_bon">Bon</label>
@@ -314,8 +415,9 @@
                                     </td>
                                     <td>
                                         <div class="photo-cell-wrapper">
-                                            <input type="file" class="form-control form-control-sm photo-upload" name="photo_flexibles" accept="image/*" data-preview="preview_flexibles">
-                                            <div class="photo-preview" id="preview_flexibles"></div>
+                                            <div class="multi-photo-container" id="photos_flexibles_retour">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_flexibles_retour" accept="image/*" data-container="photos_flexibles_retour" data-field="flexibles_retour" multiple>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -332,6 +434,13 @@
                                         </div>
                                     </td>
                                     <td>
+                                        <div class="photo-cell-wrapper">
+                                            <div class="multi-photo-container" id="photos_commandes_reception">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_commandes_reception" accept="image/*" data-container="photos_commandes_reception" data-field="commandes_reception" multiple>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="commandes_retour" id="commandes_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="commandes_retour_bon">Bon</label>
@@ -342,8 +451,9 @@
                                     </td>
                                     <td>
                                         <div class="photo-cell-wrapper">
-                                            <input type="file" class="form-control form-control-sm photo-upload" name="photo_commandes" accept="image/*" data-preview="preview_commandes">
-                                            <div class="photo-preview" id="preview_commandes"></div>
+                                            <div class="multi-photo-container" id="photos_commandes_retour">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_commandes_retour" accept="image/*" data-container="photos_commandes_retour" data-field="commandes_retour" multiple>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -365,8 +475,9 @@
                                 <tr>
                                     <th>Élément</th>
                                     <th class="text-center">Réception</th>
+                                    <th class="text-center">Photos Réception <i class="fas fa-camera"></i></th>
                                     <th class="text-center">Retour</th>
-                                    <th class="text-center">Photos <i class="fas fa-camera"></i></th>
+                                    <th class="text-center">Photos Retour <i class="fas fa-camera"></i></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -382,6 +493,13 @@
                                         </div>
                                     </td>
                                     <td>
+                                        <div class="photo-cell-wrapper">
+                                            <div class="multi-photo-container" id="photos_conformite_reception">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_conformite_reception" accept="image/*" data-container="photos_conformite_reception" data-field="conformite_reception" multiple>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="conformite_retour" id="conformite_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="conformite_retour_bon">Bon</label>
@@ -392,8 +510,9 @@
                                     </td>
                                     <td>
                                         <div class="photo-cell-wrapper">
-                                            <input type="file" class="form-control form-control-sm photo-upload" name="photo_conformite" accept="image/*" data-preview="preview_conformite">
-                                            <div class="photo-preview" id="preview_conformite"></div>
+                                            <div class="multi-photo-container" id="photos_conformite_retour">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_conformite_retour" accept="image/*" data-container="photos_conformite_retour" data-field="conformite_retour" multiple>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -410,6 +529,13 @@
                                         </div>
                                     </td>
                                     <td>
+                                        <div class="photo-cell-wrapper">
+                                            <div class="multi-photo-container" id="photos_mobilites_reception">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_mobilites_reception" accept="image/*" data-container="photos_mobilites_reception" data-field="mobilites_reception" multiple>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="mobilites_retour" id="mobilites_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="mobilites_retour_bon">Bon</label>
@@ -420,8 +546,9 @@
                                     </td>
                                     <td>
                                         <div class="photo-cell-wrapper">
-                                            <input type="file" class="form-control form-control-sm photo-upload" name="photo_mobilites" accept="image/*" data-preview="preview_mobilites">
-                                            <div class="photo-preview" id="preview_mobilites"></div>
+                                            <div class="multi-photo-container" id="photos_mobilites_retour">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_mobilites_retour" accept="image/*" data-container="photos_mobilites_retour" data-field="mobilites_retour" multiple>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -438,6 +565,13 @@
                                         </div>
                                     </td>
                                     <td>
+                                        <div class="photo-cell-wrapper">
+                                            <div class="multi-photo-container" id="photos_nacelles_reception">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_nacelles_reception" accept="image/*" data-container="photos_nacelles_reception" data-field="nacelles_reception" multiple>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="nacelles_retour" id="nacelles_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="nacelles_retour_bon">Bon</label>
@@ -448,8 +582,9 @@
                                     </td>
                                     <td>
                                         <div class="photo-cell-wrapper">
-                                            <input type="file" class="form-control form-control-sm photo-upload" name="photo_nacelles" accept="image/*" data-preview="preview_nacelles">
-                                            <div class="photo-preview" id="preview_nacelles"></div>
+                                            <div class="multi-photo-container" id="photos_nacelles_retour">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_nacelles_retour" accept="image/*" data-container="photos_nacelles_retour" data-field="nacelles_retour" multiple>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -466,6 +601,13 @@
                                         </div>
                                     </td>
                                     <td>
+                                        <div class="photo-cell-wrapper">
+                                            <div class="multi-photo-container" id="photos_securite_reception">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_securite_reception" accept="image/*" data-container="photos_securite_reception" data-field="securite_reception" multiple>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="securite_retour" id="securite_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="securite_retour_bon">Bon</label>
@@ -476,8 +618,9 @@
                                     </td>
                                     <td>
                                         <div class="photo-cell-wrapper">
-                                            <input type="file" class="form-control form-control-sm photo-upload" name="photo_securite" accept="image/*" data-preview="preview_securite">
-                                            <div class="photo-preview" id="preview_securite"></div>
+                                            <div class="multi-photo-container" id="photos_securite_retour">
+                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_securite_retour" accept="image/*" data-container="photos_securite_retour" data-field="securite_retour" multiple>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -498,40 +641,60 @@
                             <h5 class="text-clc-navy mb-3">Réception</h5>
                             
                             <div class="mb-3">
-                                <label class="form-label">Niveau Carburant</label>
-                                <div class="btn-group w-100" role="group">
-                                    <input type="radio" class="btn-check" name="carburant_reception" id="carburant_reception_0" value="0">
-                                    <label class="btn btn-outline-secondary btn-sm" for="carburant_reception_0">0</label>
-                                    
-                                    <input type="radio" class="btn-check" name="carburant_reception" id="carburant_reception_half" value="1/2">
-                                    <label class="btn btn-outline-secondary btn-sm" for="carburant_reception_half">1/2</label>
-                                    
-                                    <input type="radio" class="btn-check" name="carburant_reception" id="carburant_reception_1" value="1">
-                                    <label class="btn btn-outline-secondary btn-sm" for="carburant_reception_1">1</label>
+                                <label class="form-label">Niveau Carburant: <span id="carburant_reception_value">0</span></label>
+                                <input type="range" class="form-range" name="carburant_reception" id="carburant_reception" min="0" max="100" step="5" value="0" oninput="document.getElementById('carburant_reception_value').textContent = this.value + '%'">
+                                <div class="d-flex justify-content-between text-muted" style="font-size: 0.85rem;">
+                                    <span>Vide</span>
+                                    <span>1/4</span>
+                                    <span>1/2</span>
+                                    <span>3/4</span>
+                                    <span>Plein</span>
                                 </div>
                             </div>
                             
                             <div class="mb-3">
                                 <label class="form-label">Fuites</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="fuite_moteur_reception" id="fuite_moteur_reception" value="oui">
-                                    <label class="form-check-label" for="fuite_moteur_reception">Moteur</label>
+                                
+                                <div class="mb-2">
+                                    <label class="form-label" style="font-weight: normal; font-size: 0.9rem;">Moteur</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="fuite_moteur_reception" id="fuite_moteur_reception_non" value="non">
+                                        <label class="btn btn-outline-success btn-sm" for="fuite_moteur_reception_non">Non</label>
+                                        
+                                        <input type="radio" class="btn-check" name="fuite_moteur_reception" id="fuite_moteur_reception_oui" value="oui">
+                                        <label class="btn btn-outline-danger btn-sm" for="fuite_moteur_reception_oui">Oui</label>
+                                    </div>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="fuite_hydraulique_reception" id="fuite_hydraulique_reception" value="oui">
-                                    <label class="form-check-label" for="fuite_hydraulique_reception">Hydraulique</label>
+                                
+                                <div class="mb-2">
+                                    <label class="form-label" style="font-weight: normal; font-size: 0.9rem;">Hydraulique</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="fuite_hydraulique_reception" id="fuite_hydraulique_reception_non" value="non">
+                                        <label class="btn btn-outline-success btn-sm" for="fuite_hydraulique_reception_non">Non</label>
+                                        
+                                        <input type="radio" class="btn-check" name="fuite_hydraulique_reception" id="fuite_hydraulique_reception_oui" value="oui">
+                                        <label class="btn btn-outline-danger btn-sm" for="fuite_hydraulique_reception_oui">Oui</label>
+                                    </div>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="fuite_gasoil_reception" id="fuite_gasoil_reception" value="oui">
-                                    <label class="form-check-label" for="fuite_gasoil_reception">Gasoil</label>
+                                
+                                <div class="mb-2">
+                                    <label class="form-label" style="font-weight: normal; font-size: 0.9rem;">Gasoil</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="fuite_gasoil_reception" id="fuite_gasoil_reception_non" value="non">
+                                        <label class="btn btn-outline-success btn-sm" for="fuite_gasoil_reception_non">Non</label>
+                                        
+                                        <input type="radio" class="btn-check" name="fuite_gasoil_reception" id="fuite_gasoil_reception_oui" value="oui">
+                                        <label class="btn btn-outline-danger btn-sm" for="fuite_gasoil_reception_oui">Oui</label>
+                                    </div>
                                 </div>
                             </div>
                             
                             <div class="mb-3">
                                 <label class="form-label"><i class="fas fa-camera"></i> Photo des fuites (Réception)</label>
                                 <div class="photo-cell-wrapper">
-                                    <input type="file" class="form-control form-control-sm photo-upload" name="photo_fuite_reception" accept="image/*" data-preview="preview_fuite_reception">
-                                    <div class="photo-preview" id="preview_fuite_reception"></div>
+                                    <div class="multi-photo-container" id="photos_fuite_reception">
+                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_fuite_reception" accept="image/*" data-container="photos_fuite_reception" data-field="fuite_reception" multiple>
+                                    </div>
                                 </div>
                                 <small class="text-muted">Ajoutez une photo si vous constatez des fuites</small>
                             </div>
@@ -541,40 +704,60 @@
                             <h5 class="text-clc-navy mb-3">Retour</h5>
                             
                             <div class="mb-3">
-                                <label class="form-label">Niveau Carburant</label>
-                                <div class="btn-group w-100" role="group">
-                                    <input type="radio" class="btn-check" name="carburant_retour" id="carburant_retour_0" value="0">
-                                    <label class="btn btn-outline-secondary btn-sm" for="carburant_retour_0">0</label>
-                                    
-                                    <input type="radio" class="btn-check" name="carburant_retour" id="carburant_retour_half" value="1/2">
-                                    <label class="btn btn-outline-secondary btn-sm" for="carburant_retour_half">1/2</label>
-                                    
-                                    <input type="radio" class="btn-check" name="carburant_retour" id="carburant_retour_1" value="1">
-                                    <label class="btn btn-outline-secondary btn-sm" for="carburant_retour_1">1</label>
+                                <label class="form-label">Niveau Carburant: <span id="carburant_retour_value">0</span></label>
+                                <input type="range" class="form-range" name="carburant_retour" id="carburant_retour" min="0" max="100" step="5" value="0" oninput="document.getElementById('carburant_retour_value').textContent = this.value + '%'">
+                                <div class="d-flex justify-content-between text-muted" style="font-size: 0.85rem;">
+                                    <span>Vide</span>
+                                    <span>1/4</span>
+                                    <span>1/2</span>
+                                    <span>3/4</span>
+                                    <span>Plein</span>
                                 </div>
                             </div>
                             
                             <div class="mb-3">
                                 <label class="form-label">Fuites</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="fuite_moteur_retour" id="fuite_moteur_retour" value="oui">
-                                    <label class="form-check-label" for="fuite_moteur_retour">Moteur</label>
+                                
+                                <div class="mb-2">
+                                    <label class="form-label" style="font-weight: normal; font-size: 0.9rem;">Moteur</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="fuite_moteur_retour" id="fuite_moteur_retour_non" value="non">
+                                        <label class="btn btn-outline-success btn-sm" for="fuite_moteur_retour_non">Non</label>
+                                        
+                                        <input type="radio" class="btn-check" name="fuite_moteur_retour" id="fuite_moteur_retour_oui" value="oui">
+                                        <label class="btn btn-outline-danger btn-sm" for="fuite_moteur_retour_oui">Oui</label>
+                                    </div>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="fuite_hydraulique_retour" id="fuite_hydraulique_retour" value="oui">
-                                    <label class="form-check-label" for="fuite_hydraulique_retour">Hydraulique</label>
+                                
+                                <div class="mb-2">
+                                    <label class="form-label" style="font-weight: normal; font-size: 0.9rem;">Hydraulique</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="fuite_hydraulique_retour" id="fuite_hydraulique_retour_non" value="non">
+                                        <label class="btn btn-outline-success btn-sm" for="fuite_hydraulique_retour_non">Non</label>
+                                        
+                                        <input type="radio" class="btn-check" name="fuite_hydraulique_retour" id="fuite_hydraulique_retour_oui" value="oui">
+                                        <label class="btn btn-outline-danger btn-sm" for="fuite_hydraulique_retour_oui">Oui</label>
+                                    </div>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="fuite_gasoil_retour" id="fuite_gasoil_retour" value="oui">
-                                    <label class="form-check-label" for="fuite_gasoil_retour">Gasoil</label>
+                                
+                                <div class="mb-2">
+                                    <label class="form-label" style="font-weight: normal; font-size: 0.9rem;">Gasoil</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="fuite_gasoil_retour" id="fuite_gasoil_retour_non" value="non">
+                                        <label class="btn btn-outline-success btn-sm" for="fuite_gasoil_retour_non">Non</label>
+                                        
+                                        <input type="radio" class="btn-check" name="fuite_gasoil_retour" id="fuite_gasoil_retour_oui" value="oui">
+                                        <label class="btn btn-outline-danger btn-sm" for="fuite_gasoil_retour_oui">Oui</label>
+                                    </div>
                                 </div>
                             </div>
                             
                             <div class="mb-3">
                                 <label class="form-label"><i class="fas fa-camera"></i> Photo des fuites (Retour)</label>
                                 <div class="photo-cell-wrapper">
-                                    <input type="file" class="form-control form-control-sm photo-upload" name="photo_fuite_retour" accept="image/*" data-preview="preview_fuite_retour">
-                                    <div class="photo-preview" id="preview_fuite_retour"></div>
+                                    <div class="multi-photo-container" id="photos_fuite_retour">
+                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_fuite_retour" accept="image/*" data-container="photos_fuite_retour" data-field="fuite_retour" multiple>
+                                    </div>
                                 </div>
                                 <small class="text-muted">Ajoutez une photo si vous constatez des fuites</small>
                             </div>
@@ -594,11 +777,12 @@
                             <label for="observations_reception" class="form-label">Observations Réception</label>
                             <textarea class="form-control" id="observations_reception" name="observations_reception" rows="4"></textarea>
                             
-                            <div class="mt-3">
-                                <label class="form-label"><i class="fas fa-camera"></i> Photos Observations Réception</label>
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-camera"></i> Photos d'observation (Réception)</label>
                                 <div class="photo-cell-wrapper">
-                                    <input type="file" class="form-control form-control-sm photo-upload" name="photo_observation_reception" accept="image/*" data-preview="preview_observation_reception" multiple>
-                                    <div class="photo-preview" id="preview_observation_reception"></div>
+                                    <div class="multi-photo-container" id="photos_observation_reception">
+                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_observation_reception" accept="image/*" data-container="photos_observation_reception" data-field="observation_reception" multiple>
+                                    </div>
                                 </div>
                                 <small class="text-muted">Ajoutez des photos pour illustrer vos observations</small>
                             </div>
@@ -607,11 +791,12 @@
                             <label for="observations_retour" class="form-label">Observations Retour</label>
                             <textarea class="form-control" id="observations_retour" name="observations_retour" rows="4"></textarea>
                             
-                            <div class="mt-3">
-                                <label class="form-label"><i class="fas fa-camera"></i> Photos Observations Retour</label>
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-camera"></i> Photos d'observation (Retour)</label>
                                 <div class="photo-cell-wrapper">
-                                    <input type="file" class="form-control form-control-sm photo-upload" name="photo_observation_retour" accept="image/*" data-preview="preview_observation_retour" multiple>
-                                    <div class="photo-preview" id="preview_observation_retour"></div>
+                                    <div class="multi-photo-container" id="photos_observation_retour">
+                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_observation_retour" accept="image/*" data-container="photos_observation_retour" data-field="observation_retour" multiple>
+                                    </div>
                                 </div>
                                 <small class="text-muted">Ajoutez des photos pour illustrer vos observations</small>
                             </div>
@@ -660,23 +845,29 @@
             <div class="card mb-4 border-0 shadow-sm">
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <button type="button" class="btn btn-outline-primary btn-lg w-100" id="saveDraftBtn">
                                 <i class="fas fa-save"></i> Sauvegarder le PV
                                 <br><small class="d-block mt-1">Enregistrer pour continuer plus tard</small>
                             </button>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-outline-info btn-lg w-100" id="downloadPVBtn">
+                                <i class="fas fa-download"></i> Télécharger le PDF
+                                <br><small class="d-block mt-1">Générer et télécharger le PDF</small>
+                            </button>
+                        </div>
+                        <div class="col-md-4">
                             <button type="submit" class="btn btn-clc-red btn-lg w-100" id="sendEmailBtn">
-                                <i class="fas fa-paper-plane"></i> Générer et Envoyer par Email
-                                <br><small class="d-block mt-1">Créer le PDF et l'envoyer immédiatement</small>
+                                <i class="fas fa-paper-plane"></i> Envoyer par Email
+                                <br><small class="d-block mt-1">Créer le PDF et l'envoyer</small>
                             </button>
                         </div>
                     </div>
                     <div class="text-center mt-3">
                         <small class="text-muted">
                             <i class="fas fa-info-circle"></i> 
-                            Vous pouvez sauvegarder votre PV à tout moment et l'envoyer plus tard
+                            Vous pouvez sauvegarder votre PV à tout moment et l'envoyer ou le télécharger plus tard
                         </small>
                     </div>
                 </div>
@@ -696,42 +887,140 @@
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>Information :</strong> Configurez les paramètres SMTP pour permettre l'envoi automatique des PV par email.
-                        <br><small>Pour Gmail, créez un "Mot de passe d'application" sur <a href="https://myaccount.google.com/apppasswords" target="_blank">myaccount.google.com/apppasswords</a></small>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Configuration de l'envoi automatique des emails</strong>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#helpInstructions" aria-expanded="false" aria-controls="helpInstructions">
+                                <i class="fas fa-question-circle"></i> Aide
+                            </button>
+                        </div>
+                        <p class="mt-2 mb-0">Pour que l'application puisse envoyer les PV par email automatiquement, vous devez configurer une adresse email.</p>
+                        
+                        <div class="collapse mt-3" id="helpInstructions">
+                            <hr>
+                            
+                            <div class="mb-4">
+                                <h6><i class="fas fa-envelope text-primary"></i> <strong>Option 1 : Utiliser Gmail (le plus simple)</strong></h6>
+                                <p class="mb-2">Si vous avez une adresse Gmail (comme <code>votrenom@gmail.com</code>), suivez ces 4 étapes :</p>
+                                <ol class="mb-2">
+                                    <li class="mb-2">
+                                        <strong>Tapez votre adresse Gmail</strong> dans le champ "Email" ci-dessous
+                                    </li>
+                                    <li class="mb-2">
+                                        <strong>Ouvrez ce lien dans un nouvel onglet :</strong><br>
+                                        <a href="https://myaccount.google.com/apppasswords" target="_blank" class="alert-link btn btn-sm btn-outline-primary mt-1">
+                                            <i class="fas fa-external-link-alt"></i> myaccount.google.com/apppasswords
+                                        </a>
+                                    </li>
+                                    <li class="mb-2">
+                                        <strong>Google va vous demander votre mot de passe Gmail</strong> (celui que vous utilisez normalement)
+                                    </li>
+                                    <li class="mb-2">
+                                        <strong>Google va générer un code spécial</strong> (16 caractères) :<br>
+                                        → <strong>Copiez ce code</strong> et <strong>collez-le</strong> dans le champ "Mot de passe SMTP" ci-dessous<br>
+                                        <small class="text-muted">💡 Ce code est différent de votre mot de passe Gmail habituel. C'est normal !</small>
+                                    </li>
+                                </ol>
+                                <div class="alert alert-success mb-0">
+                                    <i class="fas fa-check-circle"></i> <strong>C'est tout !</strong> Vous pouvez maintenant tester puis enregistrer.
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="mb-3">
+                                <h6><i class="fas fa-building text-warning"></i> <strong>Option 2 : Utiliser votre email professionnel</strong></h6>
+                                <p class="mb-2">Si vous utilisez un email d'entreprise (comme <code>votrenom@votreentreprise.com</code>) :</p>
+                                <ol class="mb-2">
+                                    <li class="mb-2">
+                                        <strong>Tapez votre adresse email professionnelle</strong> dans le champ "Email" ci-dessous
+                                    </li>
+                                    <li class="mb-2">
+                                        <strong>Tapez votre mot de passe email habituel</strong> dans le champ "Mot de passe SMTP"<br>
+                                        <small class="text-muted">(Le même mot de passe que vous utilisez pour lire vos emails)</small>
+                                    </li>
+                                    <li class="mb-2">
+                                        <strong>Cliquez sur le lien "Afficher les paramètres avancés"</strong> en bas du formulaire
+                                    </li>
+                                    <li class="mb-2">
+                                        <strong>Modifiez le "Serveur SMTP"</strong> selon votre fournisseur d'email :
+                                        <ul class="mt-2">
+                                            <li><strong>Microsoft / Office 365 / Outlook :</strong> Tapez <code>smtp.office365.com</code></li>
+                                            <li><strong>OVH :</strong> Tapez <code>ssl0.ovh.net</code></li>
+                                            <li><strong>Orange Pro :</strong> Tapez <code>smtp.orange.fr</code></li>
+                                            <li><strong>Autre fournisseur :</strong> Demandez à votre service informatique quel est le "serveur SMTP"</li>
+                                        </ul>
+                                        <small class="text-muted">💡 Le port 587 est déjà configuré, pas besoin de le changer.</small>
+                                    </li>
+                                </ol>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="alert alert-secondary mb-0">
+                                <i class="fas fa-lock"></i> <strong>Sécurité :</strong> Vos identifiants (email et mot de passe) sont enregistrés uniquement sur votre serveur. Personne d'autre n'y a accès.
+                            </div>
+                        </div>
                     </div>
                     
                     <form id="smtpConfigForm">
-                        <div class="row">
-                            <div class="col-md-8 mb-3">
-                                <label for="smtp_server" class="form-label">Serveur SMTP</label>
-                                <input type="text" class="form-control" id="smtp_server" name="smtp_server" placeholder="smtp.gmail.com" required>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="smtp_port" class="form-label">Port</label>
-                                <input type="number" class="form-control" id="smtp_port" name="smtp_port" placeholder="587" required>
-                            </div>
+                        <!-- Champs cachés pour serveur et port (valeurs par défaut Gmail) -->
+                        <input type="hidden" id="smtp_server" name="smtp_server" value="smtp.gmail.com">
+                        <input type="hidden" id="smtp_port" name="smtp_port" value="587">
+                        
+                        <div class="mb-3">
+                            <label for="smtp_username" class="form-label">
+                                <i class="fas fa-envelope"></i> Email <span class="text-danger">*</span>
+                            </label>
+                            <input type="email" class="form-control" id="smtp_username" name="smtp_username" placeholder="votre.email@gmail.com ou votre.email@entreprise.com" required>
+                            <small class="text-muted">Adresse email qui enverra les PV (Gmail ou email professionnel)</small>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="smtp_username" class="form-label">Email / Nom d'utilisateur</label>
-                            <input type="email" class="form-control" id="smtp_username" name="smtp_username" placeholder="votre.email@gmail.com" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="smtp_password" class="form-label">Mot de passe SMTP</label>
+                            <label for="smtp_password" class="form-label">
+                                <i class="fas fa-key"></i> Mot de passe SMTP <span class="text-danger">*</span>
+                            </label>
                             <div class="input-group">
-                                <input type="password" class="form-control" id="smtp_password" name="smtp_password" placeholder="Mot de passe d'application">
+                                <input type="password" class="form-control" id="smtp_password" name="smtp_password" placeholder="Mot de passe d'application Gmail ou mot de passe email professionnel">
                                 <button class="btn btn-outline-secondary" type="button" id="togglePassword">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
-                            <small class="text-muted" id="passwordStatus"></small>
+                            <small class="text-muted" id="passwordStatus">Pour Gmail : code à 16 caractères de myaccount.google.com/apppasswords | Pour email pro : votre mot de passe habituel</small>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="smtp_from_name" class="form-label">Nom de l'expéditeur</label>
-                            <input type="text" class="form-control" id="smtp_from_name" name="smtp_from_name" placeholder="Centrale Lyon Conseil">
+                            <label for="smtp_from_name" class="form-label">
+                                <i class="fas fa-user"></i> Nom de l'expéditeur
+                            </label>
+                            <input type="text" class="form-control" id="smtp_from_name" name="smtp_from_name" placeholder="France Montage" value="France Montage">
+                            <small class="text-muted">Le nom qui apparaîtra comme expéditeur des emails</small>
+                        </div>
+                        
+                        <!-- Lien pour afficher les paramètres avancés -->
+                        <div class="text-center mb-3">
+                            <a href="#" id="showAdvancedSettings" class="text-muted small">
+                                <i class="fas fa-cog"></i> Afficher les paramètres avancés (serveur/port)
+                            </a>
+                        </div>
+                        
+                        <!-- Paramètres avancés cachés par défaut -->
+                        <div id="advancedSettings" style="display: none;">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> <strong>Paramètres avancés</strong> - Ne modifiez ces valeurs que si vous n'utilisez pas Gmail
+                            </div>
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label for="smtp_server_advanced" class="form-label">Serveur SMTP</label>
+                                    <input type="text" class="form-control" id="smtp_server_advanced" placeholder="smtp.gmail.com">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="smtp_port_advanced" class="form-label">Port</label>
+                                    <input type="number" class="form-control" id="smtp_port_advanced" placeholder="587">
+                                </div>
+                            </div>
                         </div>
                     </form>
                     
@@ -752,7 +1041,7 @@
 
     <footer class="clc-footer mt-5">
         <div class="container text-center">
-            <p class="mb-0">&copy; 2025 Centrale Lyon Conseil - Tous droits réservés</p>
+            <p class="mb-0">&copy; 2025 France Montage - Tous droits réservés</p>
         </div>
     </footer>
 

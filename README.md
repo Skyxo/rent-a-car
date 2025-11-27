@@ -1,51 +1,38 @@
-# PV Matériel Loué - Centrale Lyon Conseil
+# PV Matériel Loué - France Montage - Groupe Briand
 
 ## 🎯 Application de Gestion des Procès-Verbaux de Matériel Loué
 
-Application web professionnelle développée pour Centrale Lyon Conseil permettant la numérisation complète du processus de gestion des locations de matériel. Cette solution transforme les procès-verbaux papier en documents PDF professionnels avec photos, signatures électroniques et envoi automatisé par email.
+Application web professionnelle développée pour **France Montage - Groupe Briand** permettant la numérisation complète du processus de contrôle des matériels loués. Cette solution transforme les procès-verbaux papier en documents PDF professionnels avec photos, signatures électroniques et envoi automatisé par email.
 
 ### ✨ Fonctionnalités Principales
 
-- ✅ **Formulaire intelligent** : Saisie guidée pour réception et retour de matériel
-- 📸 **Photos intégrées** : Upload de photos pour chaque poste d'inspection + observations
-- ✍️ **Signatures électroniques** : Capture tactile des signatures (compatible mobile)
-- 📄 **Génération PDF** : Documents professionnels avec photos et signatures
-- 📧 **Envoi automatique** : Email avec PDF en pièce jointe aux destinataires
-- 💾 **Gestion des brouillons** : Sauvegarde et reprise des PV en cours
-- ⚙️ **Configuration web** : Paramètres SMTP configurables sans toucher au code
-- 📱 **100% Responsive** : Interface optimisée pour tablettes et smartphones
-- 🎨 **Charte graphique CLC** : Respect de l'identité visuelle École Centrale de Lyon
+- ✅ **Formulaire de contrôle complet** : Saisie guidée pour réception et retour de matériel
+- 📸 **Upload de photos** : Ajout de photos pour chaque poste d'inspection avec observations
+- ✍️ **Signatures électroniques** : Capture tactile des visas loueur et locataire (compatible mobile)
+- 📄 **Génération PDF automatique** : Documents professionnels avec insertion des photos et signatures
+- 📧 **Envoi par email** : Email automatique avec PDF en pièce jointe au conducteur de travaux
+- 💾 **Sauvegarde automatique** : Protection contre la perte de données (localStorage 24h)
+- 🔄 **Gestion des PV** : Sauvegarde, chargement et reprise des PV en cours (brouillons, envoyés)
+- ⚙️ **Configuration SMTP** : Paramètres email configurables via interface web
+- 📱 **100% Responsive** : Interface mobile-first optimisée pour tablettes et smartphones de chantier
+- 🎨 **Charte graphique** : Respect de l'identité visuelle France Montage - Groupe Briand
 
 ---
 
-## 🚀 DÉPLOIEMENT EN PRODUCTION
+## 🚀 ACCÈS EN PRODUCTION
 
-### 🌐 Serveur : **188.137.240.250** (Zomro)
+### 🌐 URL : **http://188.137.240.250**
 
-### Option 1 : Déploiement automatique rapide (Recommandé)
+L'application est déployée et accessible 24h/24, 7j/7 depuis n'importe quel navigateur moderne.
 
-```bash
-cd /home/charl/rent-a-car
-./deploy/quick-deploy.sh
-```
+### Premier accès
 
-Ce script interactif vous guidera à travers toutes les étapes.
+1. **Ouvrir l'application** : http://188.137.240.250
+2. **Configurer l'email** : Cliquer sur "⚙️ Configuration Email" en haut à droite
+3. **Renseigner les paramètres SMTP** : Serveur, port, email expéditeur et mot de passe
+4. **Tester la connexion** : Utiliser le bouton "Tester" puis "Sauvegarder"
 
-### Option 2 : Test de connexion d'abord
-
-```bash
-./deploy/test-connexion.sh
-```
-
-### Option 3 : Déploiement manuel
-
-Consultez le guide complet : **[DEPLOY.md](DEPLOY.md)**
-
-### Après le déploiement
-
-1. **Accéder à l'application** : http://188.137.240.250
-2. **Configurer l'email** : Cliquer sur "⚙️ Configuration Email"
-3. **Tester l'envoi** : Utiliser le bouton "Tester la connexion"
+> 📖 **Guide utilisateur complet** : Consultez [GUIDE_UTILISATEUR.md](GUIDE_UTILISATEUR.md) pour les instructions détaillées.
 
 ---
 
@@ -53,14 +40,8 @@ Consultez le guide complet : **[DEPLOY.md](DEPLOY.md)**
 
 ### Prérequis
 
-#### Windows
-```powershell
-# Installer Python 3.11+ depuis python.org
-python --version
-
-# Installer les dépendances système pour WeasyPrint
-# Télécharger GTK3 Runtime depuis https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer
-```
+- Python 3.8+ (testé avec Python 3.11)
+- Dépendances système pour WeasyPrint (génération PDF)
 
 #### Linux (Ubuntu/Debian)
 ```bash
@@ -69,27 +50,32 @@ sudo apt-get install -y python3 python3-pip python3-venv
 sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0
 ```
 
-#### macOS
-```bash
-brew install python3
-brew install pango gdk-pixbuf
+#### Windows
+```powershell
+# Installer Python 3.11+ depuis python.org
+# Télécharger GTK3 Runtime : https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer
 ```
 
-### Installation des dépendances Python
+#### macOS
+```bash
+brew install python3 pango gdk-pixbuf
+```
 
-```powershell
+### Installation
+
+```bash
 # Cloner le dépôt
 git clone https://github.com/Skyxo/rent-a-car.git
 cd rent-a-car
 
 # Créer un environnement virtuel
-python -m venv venv
+python3 -m venv .venv
 
 # Activer l'environnement virtuel
-# Windows PowerShell :
-.\venv\Scripts\Activate.ps1
 # Linux/macOS :
-source venv/bin/activate
+source .venv/bin/activate
+# Windows PowerShell :
+.\.venv\Scripts\Activate.ps1
 
 # Installer les dépendances
 pip install -r requirements.txt
@@ -97,39 +83,30 @@ pip install -r requirements.txt
 
 ---
 
-## ⚙️ Configuration
+## ⚙️ Configuration SMTP
 
-### 1. Variables d'environnement
+La configuration SMTP se fait directement via l'interface web (recommandé) ou via variables d'environnement.
 
-Copier le fichier d'exemple et le personnaliser :
+### Via l'interface web (recommandé)
 
-```powershell
-Copy-Item .env.example .env
-```
+1. Accéder à l'application
+2. Cliquer sur "⚙️ Configuration Email"
+3. Renseigner les paramètres :
+   - **Serveur SMTP** : `smtp.gmail.com` (pour Gmail)
+   - **Port SMTP** : `587`
+   - **Email expéditeur** : votre adresse email
+   - **Mot de passe** : mot de passe d'application (pas le mot de passe principal)
+   - **Nom expéditeur** : "France Montage" (par exemple)
 
-Éditer `.env` avec vos informations :
+### Configuration Gmail
 
-```ini
-SECRET_KEY=votre-cle-secrete-generee-aleatoirement
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=votre-email@gmail.com
-SMTP_PASSWORD=votre-mot-de-passe-application
-SENDER_EMAIL=votre-email@gmail.com
-```
+Pour utiliser Gmail, vous devez générer un **mot de passe d'application** :
 
-### 2. Configuration Gmail (recommandé)
-
-Pour utiliser Gmail pour l'envoi d'emails :
-
-1. Accéder à [Google Account Security](https://myaccount.google.com/security)
-2. Activer la **validation en deux étapes**
-3. Générer un **mot de passe d'application** :
-   - Aller dans "Mots de passe des applications"
-   - Sélectionner "Autre (nom personnalisé)"
-   - Nommer : "PV Matériel Loué"
-   - Copier le mot de passe de 16 caractères
-4. Utiliser ce mot de passe dans `SMTP_PASSWORD`
+1. Activer la validation en deux étapes sur votre compte Google
+2. Accéder à [https://myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+3. Créer un nouveau mot de passe d'application (nommer "PV Matériel")
+4. Copier le code à 16 caractères généré
+5. Utiliser ce code dans le champ "Mot de passe SMTP"
 
 ---
 
@@ -137,9 +114,11 @@ Pour utiliser Gmail pour l'envoi d'emails :
 
 ### Mode Développement
 
-```powershell
+```bash
 # Activer l'environnement virtuel
-.\venv\Scripts\Activate.ps1
+source .venv/bin/activate  # Linux/macOS
+# ou
+.\.venv\Scripts\Activate.ps1  # Windows
 
 # Lancer le serveur Flask
 python server.py
@@ -147,51 +126,50 @@ python server.py
 
 L'application sera accessible sur : **http://localhost:5000**
 
-### Mode Production avec Docker
+### Mode Production (Docker)
 
 ```bash
-# Construire l'image Docker
-docker build -t pv-materiel-loue .
+# Construire l'image
+docker build -t pv-materiel .
 
 # Lancer le conteneur
-docker run -d \
-  -p 5000:5000 \
-  -e SECRET_KEY="votre-cle-secrete" \
-  -e SMTP_USERNAME="votre-email@gmail.com" \
-  -e SMTP_PASSWORD="votre-mot-de-passe" \
-  --name pv-app \
-  pv-materiel-loue
+docker run -d -p 80:5000 --name pv-materiel pv-materiel
 ```
 
 ---
 
 ## 📱 Utilisation
 
-### Workflow Standard
+### Workflow de création d'un PV
 
-1. **Accéder au formulaire** : Ouvrir l'application dans un navigateur (optimisé mobile/tablette)
+1. **Remplir les informations générales** :
+   - Chantier, client, machine, modèle, n° série
+   - Dates et compteurs d'heures (Réception et/ou Retour)
 
-2. **Remplir les informations** :
-   - Identification du chantier et du matériel
-   - Dates et compteurs (Réception et/ou Retour)
-   - État du matériel via les tableaux d'inspection
-   - Niveau de fluides et fuites
+2. **Contrôler le matériel** :
+   - Pour chaque poste (Éclairage, Rétroviseurs, Carrosserie, etc.) :
+     - Sélectionner l'état : **Bon** / **Défectueux** / **N/A**
+     - Ajouter des photos si nécessaire
+     - Rédiger des observations
+   - Indiquer le niveau de carburant (slider 0-100%)
+   - Signaler les fuites (Oui/Non) : Moteur, Hydraulique, Gasoil
 
 3. **Signer électroniquement** :
-   - Tracer la signature dans le canvas "VISA Réception" et/ou "VISA Retour"
-   - Utiliser le bouton "Effacer" si nécessaire
+   - Signature Loueur (Réception et/ou Retour)
+   - Signature Locataire (Réception et/ou Retour)
 
 4. **Générer et envoyer** :
-   - Cliquer sur "Générer et Envoyer le PV"
-   - Le PDF est généré automatiquement
-   - Le document est envoyé par email au destinataire
+   - **"Sauvegarder pour plus tard"** : Enregistrer en brouillon sur le serveur
+   - **"Télécharger PDF"** : Générer et télécharger le PDF immédiatement
+   - **"Valider et Envoyer par Email"** : Générer le PDF et l'envoyer automatiquement
 
-### Fonctionnalités Avancées
+### Fonctionnalités avancées
 
-- **Sauvegarde automatique** : Les données du formulaire sont sauvegardées localement (localStorage) pour éviter les pertes
-- **Validation intelligente** : Contrôles de cohérence (compteur retour > réception)
-- **Responsive Design** : Interface optimisée pour tablettes de chantier
-- **Signatures haute résolution** : Gestion du devicePixelRatio pour écrans Retina
+- **Sauvegarde automatique locale** : Toutes les 500ms dans le localStorage (expire après 24h)
+- **Gestion des PV existants** : Charger, modifier, compléter des PV sauvegardés
+- **Statuts des PV** : Nouveau, Brouillon, Envoyé, Téléchargé
+- **Déselection des boutons radio** : Cliquer à nouveau pour déselectionner un état
+- **Photos persistantes** : Les photos sont sauvegardées avec le PV et restaurées au chargement
 
 ---
 
@@ -199,19 +177,84 @@ docker run -d \
 
 ```
 rent-a-car/
-├── server.py                 # Serveur Flask principal
-├── requirements.txt          # Dépendances Python
-├── Dockerfile               # Configuration Docker
-├── .env.example             # Template de configuration
-├── .gitignore              # Fichiers à ignorer par Git
-├── README.md               # Ce fichier
+├── server.py                  # Serveur Flask principal (801 lignes)
+│                              # - Routes : index, submit, download-pdf, config SMTP
+│                              # - Génération PDF avec WeasyPrint
+│                              # - Envoi email SMTP
+│                              # - Gestion des PV sauvegardés (JSON)
+│
+├── requirements.txt           # Dépendances Python
+│                              # - Flask 3.0.0
+│                              # - WeasyPrint 60.1
+│                              # - Gunicorn 21.2.0
+│                              # - Pillow 10.1.0
+│
 ├── templates/
-│   ├── index.html          # Formulaire de saisie
-│   └── pdf_template.html   # Template pour génération PDF
-└── static/
-    ├── style.css           # Styles conformes à la charte CLC
-    └── script.js           # Logique JavaScript (signatures, validation)
+│   ├── index.html             # Formulaire principal (responsive)
+│   │                          # - Formulaire Réception/Retour
+│   │                          # - Upload photos, signatures canvas
+│   │                          # - Gestion localStorage (auto-save)
+│   │
+│   └── pdf_template.html      # Template PDF (Jinja2 + WeasyPrint)
+│                              # - Mise en page A4 single-page
+│                              # - Insertion photos et signatures
+│                              # - Logos France Montage + QPE
+│
+├── static/
+│   ├── script.js              # Logique JavaScript (1355 lignes)
+│   │                          # - Gestion signatures (SignaturePad)
+│   │                          # - Upload et gestion photos (Base64)
+│   │                          # - Auto-save localStorage (24h expiry)
+│   │                          # - Déselection radio buttons
+│   │                          # - Gestion PV (load, save, create)
+│   │
+│   ├── style.css              # Styles CSS (1013 lignes)
+│   │                          # - Charte graphique France Montage
+│   │                          # - Responsive mobile-first
+│   │                          # - Surcharges Bootstrap
+│   │
+│   ├── logo.png               # Logo France Montage (PDF)
+│   ├── logo_inverse.png       # Logo France Montage (header)
+│   └── qpe.png                # Logo QPE (PDF)
+│
+├── config/
+│   └── smtp_config.json       # Configuration SMTP (généré par l'interface)
+│
+├── saved_pv/                  # PV sauvegardés (fichiers JSON)
+│   └── <uuid>.json            # Format : {form_data, photos, status, timestamp}
+│
+├── deploy/                    # Scripts de déploiement
+│   ├── quick-deploy.sh        # Déploiement rapide
+│   ├── test-connexion.sh      # Test SSH
+│   └── pv-materiel.service    # Service systemd
+│
+├── Dockerfile                 # Configuration Docker
+├── gunicorn_config.py         # Configuration Gunicorn
+├── README.md                  # Documentation (ce fichier)
+├── GUIDE_UTILISATEUR.md       # Guide utilisateur final
+└── DEPLOY.md                  # Guide de déploiement
 ```
+
+---
+
+## 🔧 Technologies Utilisées
+
+### Backend
+- **Flask 3.0.0** : Framework web Python
+- **WeasyPrint 60.1** : Génération de PDF depuis HTML/CSS
+- **Gunicorn 21.2.0** : Serveur WSGI pour production
+- **Pillow 10.1.0** : Traitement et optimisation des images
+
+### Frontend
+- **Bootstrap 5.3.0** : Framework CSS responsive
+- **SignaturePad 4.1.7** : Capture de signatures tactiles
+- **Font Awesome 6** : Icônes
+- **Vanilla JavaScript** : Gestion du formulaire et interactions
+
+### Infrastructure
+- **Nginx** : Reverse proxy et serveur web (production)
+- **Systemd** : Gestion du service (pv-materiel.service)
+- **Docker** : Conteneurisation (optionnel)
 
 ---
 
@@ -219,132 +262,126 @@ rent-a-car/
 
 ### Bonnes Pratiques Implémentées
 
-- ✅ **Protection CSRF** : Tokens de sécurité
-- ✅ **Limitation de taille** : 16MB maximum pour les requêtes
+- ✅ **Limite de taille des requêtes** : 16MB maximum (protection DoS)
 - ✅ **Variables d'environnement** : Secrets jamais en dur dans le code
-- ✅ **TLS/SSL** : Connexion SMTP sécurisée via STARTTLS
+- ✅ **SMTP sécurisé** : Connexion TLS via STARTTLS (port 587)
 - ✅ **Validation des données** : Sanitisation côté client et serveur
+- ✅ **Optimisation des images** : Redimensionnement automatique des photos
 
 ### Recommandations Production
 
-1. **HTTPS obligatoire** : Déployer derrière un reverse proxy (Nginx) avec certificat SSL
-2. **Secrets forts** : Générer une `SECRET_KEY` avec `python -c "import secrets; print(secrets.token_hex(32))"`
-3. **Firewall** : Restreindre l'accès aux ports non utilisés
-4. **Logs** : Monitorer les logs pour détecter les tentatives d'intrusion
+1. **HTTPS obligatoire** : Configurer un certificat SSL/TLS (Let's Encrypt)
+2. **Secrets forts** : Générer une `SECRET_KEY` aléatoire
+3. **Firewall** : Restreindre l'accès aux ports (80, 443 uniquement)
+4. **Logs** : Monitorer les logs Nginx et Gunicorn
 5. **Mises à jour** : Maintenir les dépendances à jour (`pip list --outdated`)
 
 ---
 
 ## 🐛 Dépannage
 
-### WeasyPrint ne fonctionne pas
+### WeasyPrint : Erreur de génération PDF
 
-**Symptôme** : Erreur lors de la génération du PDF
-
-**Solution Windows** :
-```powershell
-# Installer GTK3 Runtime
-# Télécharger depuis : https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases
-# Ajouter C:\Program Files\GTK3-Runtime Win64\bin au PATH système
-```
-
-**Solution Linux** :
+**Linux** :
 ```bash
 sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0
 ```
 
+**Windows** :
+- Télécharger GTK3 Runtime : [https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer](https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer)
+- Ajouter `C:\Program Files\GTK3-Runtime Win64\bin` au PATH
+
 ### Les emails ne sont pas envoyés
 
-1. Vérifier que les identifiants SMTP sont corrects dans `.env`
-2. Pour Gmail, s'assurer d'utiliser un **mot de passe d'application**, pas le mot de passe principal
-3. Vérifier les logs Flask pour le message d'erreur exact
-4. Tester la connexion SMTP manuellement :
+1. Vérifier la configuration SMTP dans "⚙️ Configuration Email"
+2. Pour Gmail : utiliser un **mot de passe d'application** (pas le mot de passe principal)
+3. Vérifier les logs : `journalctl -u pv-materiel -f` (production)
+4. Tester manuellement :
+   ```python
+   import smtplib
+   server = smtplib.SMTP('smtp.gmail.com', 587)
+   server.starttls()
+   server.login('email@gmail.com', 'mot-de-passe-app')
+   print("✅ Connexion réussie")
+   ```
 
-```python
-import smtplib
-server = smtplib.SMTP('smtp.gmail.com', 587)
-server.starttls()
-server.login('votre-email@gmail.com', 'votre-mot-de-passe-app')
-print("Connexion réussie !")
-```
+### Les photos ne s'affichent pas dans le PDF
 
-### Le logo ne s'affiche pas dans le PDF
+- Vérifier que les photos sont bien uploadées (prévisualisation visible)
+- Vérifier les logs serveur pour les erreurs de conversion Base64
+- Limiter la taille des photos (< 5MB par photo recommandé)
 
-- Vérifier la connexion Internet (le logo est chargé depuis centralelyonconseil.fr)
-- Alternative : Télécharger le logo localement et modifier le chemin dans `pdf_template.html`
+### Problème de signatures sur mobile
+
+- Vérifier que le canvas est bien visible (pas de dépassement)
+- S'assurer que JavaScript est activé
+- Tester avec Chrome ou Safari mobile (meilleure compatibilité)
 
 ---
 
 ## 📊 Performance
 
+### Métriques Typiques
+
+- **Génération PDF** : 2-5 secondes (selon le nombre de photos)
+- **Taille PDF** : 200-800 KB (avec 2-4 photos et signatures)
+- **Envoi email** : 1-3 secondes (selon la taille du PDF)
+- **Temps de chargement page** : < 1 seconde
+
 ### Optimisations Implémentées
 
-- **Compression des signatures** : Redimensionnement et optimisation Pillow avant insertion dans le PDF
-- **Génération en mémoire** : Utilisation de BytesIO pour éviter les écritures disque
-- **CDN** : Bootstrap et Font Awesome chargés via CDN pour réduire la taille du projet
-- **Caching navigateur** : Headers appropriés pour les ressources statiques
-
-### Benchmarks Typiques
-
-- Temps de génération PDF : 2-4 secondes
-- Taille PDF moyenne : 200-500 KB (avec 2 signatures)
-- Temps d'envoi email : 1-3 secondes
+- Compression et redimensionnement automatique des signatures
+- Génération PDF en mémoire (BytesIO, pas d'écriture disque temporaire)
+- Ressources statiques (Bootstrap, Font Awesome) via CDN
+- Auto-save localStorage (évite les requêtes serveur inutiles)
 
 ---
 
-## 🛠️ Développement
+## 📚 Documentation
 
-### Ajouter une nouvelle fonctionnalité
+- **[GUIDE_UTILISATEUR.md](GUIDE_UTILISATEUR.md)** : Guide complet pour les utilisateurs finaux
+- **[DEPLOY.md](DEPLOY.md)** : Instructions détaillées de déploiement sur serveur
+- **[CHANGELOG_FMB.md](CHANGELOG_FMB.md)** : Historique des modifications et versions
 
-1. Créer une branche :
-   ```bash
-   git checkout -b feature/nouvelle-fonctionnalite
-   ```
+---
 
-2. Modifier le code en respectant la structure MVC
+## 🚀 Déploiement
 
-3. Tester localement
+Pour déployer l'application sur un serveur de production, consultez le guide détaillé : **[DEPLOY.md](DEPLOY.md)**
 
-4. Commiter et pousser :
-   ```bash
-   git add .
-   git commit -m "feat: description de la fonctionnalité"
-   git push origin feature/nouvelle-fonctionnalite
-   ```
-
-### Tests
-
+Scripts de déploiement disponibles :
 ```bash
-# Installer les dépendances de test
-pip install pytest pytest-flask
-
-# Lancer les tests (à implémenter)
-pytest tests/
+./deploy/quick-deploy.sh      # Déploiement automatique (recommandé)
+./deploy/test-connexion.sh    # Test de connexion SSH
 ```
 
 ---
 
 ## 📄 Licence
 
-Ce projet est développé pour Centrale Lyon Conseil dans le cadre d'une mission Junior Entreprise.
+Projet développé pour **France Montage - Groupe Briand** dans le cadre de la digitalisation des procès-verbaux de matériel loué.
 
 ---
 
-## 👥 Support
+## 👥 Support & Contact
 
-Pour toute question ou assistance :
+Pour toute question, assistance ou suggestion d'amélioration :
 
-- **Email** : contact@centralelyonconseil.fr
-- **Site web** : [centralelyonconseil.fr](https://www.centralelyonconseil.fr)
+- **Déploiement** : Serveur 188.137.240.250
+- **Application** : http://188.137.240.250
+- **Documentation** : Voir les fichiers `GUIDE_UTILISATEUR.md` et `DEPLOY.md`
 
 ---
 
 ## 🎓 Crédits
 
-Développé conformément aux spécifications techniques détaillées pour la numérisation des procès-verbaux de matériel loué, en respectant l'identité visuelle de l'École Centrale de Lyon.
+**Développé par** : Charles (Skyxo)  
+**Client** : France Montage - Groupe Briand  
+**Date** : Novembre 2025
 
-**Technologies utilisées** :
+**Technologies open-source utilisées** :
 - Flask (Pallets Projects)
 - WeasyPrint (Kozea)
-- signature_pad (Szymon Nowak)
+- SignaturePad (Szymon Nowak)
 - Bootstrap (Twitter)
+- Font Awesome (Fonticons)

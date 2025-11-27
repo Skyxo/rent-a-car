@@ -1,6 +1,6 @@
 """
 Application Flask pour la génération de Procès-Verbaux de Matériel Loué
-France Montage Briand
+France Montage - Groupe Briand
 
 Architecture stateless avec génération PDF en mémoire et envoi SMTP.
 """
@@ -47,7 +47,7 @@ def load_smtp_config():
         'smtp_port': int(os.environ.get('SMTP_PORT', '587')),
         'smtp_username': os.environ.get('SMTP_USERNAME', ''),
         'smtp_password': os.environ.get('SMTP_PASSWORD', ''),
-        'smtp_from_name': os.environ.get('SMTP_FROM_NAME', 'France Montage Briand')
+        'smtp_from_name': os.environ.get('SMTP_FROM_NAME', 'France Montage')
     }
 
 def save_smtp_config(config):
@@ -158,10 +158,10 @@ Veuillez trouver ci-joint le Procès-Verbal de matériel loué pour le chantier 
 
 Date de réception : {date_reception}
 
-Ce document a été généré automatiquement par l'application de gestion France Montage Briand.
+Ce document a été généré automatiquement par l'application de gestion France Montage - Groupe Briand.
 
 Cordialement,
-L'équipe France Montage Briand
+L'équipe France Montage
         """
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
         
@@ -260,23 +260,33 @@ def submit():
             # Signatures
             'signature_reception': request.form.get('signature_reception', ''),
             'signature_retour': request.form.get('signature_retour', ''),
-            
-            # Photos des postes d'inspection
-            'photo_carrosserie': request.form.get('photo_carrosserie', ''),
-            'photo_eclairage': request.form.get('photo_eclairage', ''),
-            'photo_pneumatiques': request.form.get('photo_pneumatiques', ''),
-            'photo_panier': request.form.get('photo_panier', ''),
-            'photo_flexibles': request.form.get('photo_flexibles', ''),
-            'photo_commandes': request.form.get('photo_commandes', ''),
-            'photo_conformite': request.form.get('photo_conformite', ''),
-            'photo_mobilites': request.form.get('photo_mobilites', ''),
-            'photo_nacelles': request.form.get('photo_nacelles', ''),
-            'photo_securite': request.form.get('photo_securite', ''),
-            'photo_fuite_reception': request.form.get('photo_fuite_reception', ''),
-            'photo_fuite_retour': request.form.get('photo_fuite_retour', ''),
-            'photo_observation_reception': request.form.get('photo_observation_reception', ''),
-            'photo_observation_retour': request.form.get('photo_observation_retour', ''),
         }
+        
+        # Récupérer toutes les photos (qui peuvent avoir des noms comme photo_carrosserie_reception_1, photo_carrosserie_reception_2, etc.)
+        photo_base_fields = ['carrosserie_reception', 'carrosserie_retour',
+                             'eclairage_reception', 'eclairage_retour',
+                             'pneumatiques_reception', 'pneumatiques_retour',
+                             'panier_reception', 'panier_retour',
+                             'flexibles_reception', 'flexibles_retour',
+                             'commandes_reception', 'commandes_retour',
+                             'conformite_reception', 'conformite_retour',
+                             'mobilites_reception', 'mobilites_retour',
+                             'nacelles_reception', 'nacelles_retour',
+                             'securite_reception', 'securite_retour',
+                             'fuite_reception', 'fuite_retour',
+                             'observation_reception', 'observation_retour']
+        
+        for field in photo_base_fields:
+            # Collecter toutes les photos pour ce champ
+            photos = []
+            for key in request.form.keys():
+                if key.startswith(f'photo_{field}'):
+                    photo_data = request.form.get(key, '')
+                    if photo_data:
+                        photos.append(photo_data)
+            
+            # Stocker la liste des photos
+            form_data[f'photo_{field}'] = photos if photos else []
         
         # Validation des champs obligatoires
         if not form_data['chantier']:
@@ -295,14 +305,15 @@ def submit():
             form_data['signature_retour'] = optimize_signature(form_data['signature_retour'])
         
         # Optimiser les photos si présentes
-        photo_fields = ['photo_carrosserie', 'photo_eclairage', 'photo_pneumatiques', 'photo_panier',
-                       'photo_flexibles', 'photo_commandes', 'photo_conformite', 'photo_mobilites',
-                       'photo_nacelles', 'photo_securite', 'photo_fuite_reception', 'photo_fuite_retour',
-                       'photo_observation_reception', 'photo_observation_retour']
-        
-        for photo_field in photo_fields:
-            if form_data[photo_field]:
-                form_data[photo_field] = optimize_signature(form_data[photo_field])
+        for field in photo_base_fields:
+            photo_key = f'photo_{field}'
+            if photo_key in form_data and form_data[photo_key]:
+                # Optimiser chaque photo dans la liste
+                optimized_photos = []
+                for photo in form_data[photo_key]:
+                    if photo:
+                        optimized_photos.append(optimize_signature(photo))
+                form_data[photo_key] = optimized_photos
         
         # Ajouter la date de génération
         form_data['date_generation'] = datetime.now().strftime('%d/%m/%Y %H:%M')
@@ -311,7 +322,9 @@ def submit():
         html_content = render_template('pdf_template.html', **form_data)
         
         # Générer le PDF en mémoire avec WeasyPrint
-        pdf_bytes = HTML(string=html_content).write_pdf()
+        # Utiliser base_url pour permettre à WeasyPrint de résoudre les chemins relatifs des images
+        base_url = request.url_root
+        pdf_bytes = HTML(string=html_content, base_url=base_url).write_pdf()
         
         # Préparer la liste des destinataires (seulement le conducteur de travaux)
         recipients = [form_data['email_conducteur']]
@@ -327,12 +340,26 @@ def submit():
         if success:
             flash(message, 'success')
             
-            # Si le PV était un brouillon, le supprimer après envoi réussi
+            # Sauvegarder le PV après envoi réussi
             pv_id = request.form.get('pv_id')
-            if pv_id:
-                file_path = SAVED_PV_DIR / f"{pv_id}.json"
-                if file_path.exists():
-                    file_path.unlink()
+            if not pv_id:
+                # Générer un nouvel ID si le PV n'en a pas
+                pv_id = str(uuid.uuid4())
+            
+            # Préparer les données pour la sauvegarde
+            pv_data = {
+                'id': pv_id,
+                'chantier': form_data['chantier'],
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat(),
+                'status': 'sent',  # Marquer comme envoyé
+                'form_data': form_data
+            }
+            
+            # Sauvegarder dans un fichier JSON
+            file_path = SAVED_PV_DIR / f"{pv_id}.json"
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(pv_data, f, ensure_ascii=False, indent=2)
         else:
             flash(message, 'danger')
         
@@ -417,19 +444,29 @@ def update_smtp_config():
 
 @app.route('/config/smtp/test', methods=['POST'])
 def test_smtp_config():
-    """Teste la connexion SMTP avec les paramètres configurés."""
+    """Teste la connexion SMTP avec les paramètres fournis ou configurés."""
     try:
-        # Recharger la configuration SMTP depuis le fichier
-        config = load_smtp_config()
-        smtp_server = config.get('smtp_server')
-        smtp_port = config.get('smtp_port')
-        smtp_username = config.get('smtp_username')
-        smtp_password = config.get('smtp_password')
+        data = request.get_json() or {}
+        
+        # Utiliser les paramètres fournis dans la requête, sinon la config enregistrée
+        if data.get('smtp_server'):
+            # Tester avec les paramètres du formulaire
+            smtp_server = data.get('smtp_server')
+            smtp_port = int(data.get('smtp_port', 587))
+            smtp_username = data.get('smtp_username')
+            smtp_password = data.get('smtp_password')
+        else:
+            # Tester avec la configuration enregistrée
+            config = load_smtp_config()
+            smtp_server = config.get('smtp_server')
+            smtp_port = config.get('smtp_port')
+            smtp_username = config.get('smtp_username')
+            smtp_password = config.get('smtp_password')
         
         if not smtp_username or not smtp_password:
             return jsonify({
                 'success': False,
-                'message': 'Configuration SMTP incomplète'
+                'message': 'Configuration SMTP incomplète. Veuillez remplir tous les champs.'
             }), 400
         
         # Tester la connexion
@@ -445,7 +482,7 @@ def test_smtp_config():
     except smtplib.SMTPAuthenticationError:
         return jsonify({
             'success': False,
-            'message': 'Erreur d\'authentification. Vérifiez vos identifiants.'
+            'message': 'Erreur d\'authentification. Vérifiez vos identifiants (email et mot de passe).'
         }), 401
     except Exception as e:
         return jsonify({
@@ -592,6 +629,177 @@ def delete_pv(pv_id):
         return jsonify({
             'success': False,
             'message': f'Erreur lors de la suppression: {str(e)}'
+        }), 500
+
+
+@app.route('/download-pdf', methods=['POST'])
+def download_pdf():
+    """
+    Génère et télécharge le PDF du PV sans l'envoyer par email.
+    """
+    try:
+        # Récupération des données du formulaire (même logique que submit)
+        form_data = {
+            # Métadonnées
+            'chantier': request.form.get('chantier', ''),
+            'date_reception': request.form.get('date_reception', ''),
+            'date_retour': request.form.get('date_retour', ''),
+            'materiel_numero': request.form.get('materiel_numero', ''),
+            'materiel_type': request.form.get('materiel_type', ''),
+            'fournisseur': request.form.get('fournisseur', ''),
+            'responsable': request.form.get('responsable', ''),
+            'email_destinataire': request.form.get('email_destinataire', ''),
+            'email_conducteur': request.form.get('email_conducteur', ''),
+            
+            # Compteurs
+            'compteur_reception': request.form.get('compteur_reception', ''),
+            'compteur_retour': request.form.get('compteur_retour', ''),
+            
+            # État - Réception
+            'carrosserie_reception': request.form.get('carrosserie_reception', ''),
+            'eclairage_reception': request.form.get('eclairage_reception', ''),
+            'pneumatiques_reception': request.form.get('pneumatiques_reception', ''),
+            'panier_reception': request.form.get('panier_reception', ''),
+            'flexibles_reception': request.form.get('flexibles_reception', ''),
+            'commandes_reception': request.form.get('commandes_reception', ''),
+            'conformite_reception': request.form.get('conformite_reception', ''),
+            'mobilites_reception': request.form.get('mobilites_reception', ''),
+            'nacelles_reception': request.form.get('nacelles_reception', ''),
+            'securite_reception': request.form.get('securite_reception', ''),
+            
+            # État - Retour
+            'carrosserie_retour': request.form.get('carrosserie_retour', ''),
+            'eclairage_retour': request.form.get('eclairage_retour', ''),
+            'pneumatiques_retour': request.form.get('pneumatiques_retour', ''),
+            'panier_retour': request.form.get('panier_retour', ''),
+            'flexibles_retour': request.form.get('flexibles_retour', ''),
+            'commandes_retour': request.form.get('commandes_retour', ''),
+            'conformite_retour': request.form.get('conformite_retour', ''),
+            'mobilites_retour': request.form.get('mobilites_retour', ''),
+            'nacelles_retour': request.form.get('nacelles_retour', ''),
+            'securite_retour': request.form.get('securite_retour', ''),
+            
+            # Fluides - Réception
+            'carburant_reception': request.form.get('carburant_reception', ''),
+            'fuite_moteur_reception': request.form.get('fuite_moteur_reception', 'non'),
+            'fuite_hydraulique_reception': request.form.get('fuite_hydraulique_reception', 'non'),
+            'fuite_gasoil_reception': request.form.get('fuite_gasoil_reception', 'non'),
+            
+            # Fluides - Retour
+            'carburant_retour': request.form.get('carburant_retour', ''),
+            'fuite_moteur_retour': request.form.get('fuite_moteur_retour', 'non'),
+            'fuite_hydraulique_retour': request.form.get('fuite_hydraulique_retour', 'non'),
+            'fuite_gasoil_retour': request.form.get('fuite_gasoil_retour', 'non'),
+            
+            # Observations
+            'observations_reception': request.form.get('observations_reception', ''),
+            'observations_retour': request.form.get('observations_retour', ''),
+            
+            # Signatures
+            'signature_reception': request.form.get('signature_reception', ''),
+            'signature_retour': request.form.get('signature_retour', ''),
+        }
+        
+        # Récupérer toutes les photos
+        photo_base_fields = ['carrosserie_reception', 'carrosserie_retour',
+                             'eclairage_reception', 'eclairage_retour',
+                             'pneumatiques_reception', 'pneumatiques_retour',
+                             'panier_reception', 'panier_retour',
+                             'flexibles_reception', 'flexibles_retour',
+                             'commandes_reception', 'commandes_retour',
+                             'conformite_reception', 'conformite_retour',
+                             'mobilites_reception', 'mobilites_retour',
+                             'nacelles_reception', 'nacelles_retour',
+                             'securite_reception', 'securite_retour',
+                             'fuite_reception', 'fuite_retour',
+                             'observation_reception', 'observation_retour']
+        
+        for field in photo_base_fields:
+            photos = []
+            for key in request.form.keys():
+                if key.startswith(f'photo_{field}'):
+                    photo_data = request.form.get(key, '')
+                    if photo_data:
+                        photos.append(photo_data)
+            form_data[f'photo_{field}'] = photos if photos else []
+        
+        # Validation du champ obligatoire
+        if not form_data['chantier']:
+            return jsonify({
+                'success': False,
+                'message': 'Le chantier est obligatoire'
+            }), 400
+        
+        # Optimiser les signatures si présentes
+        if form_data['signature_reception']:
+            form_data['signature_reception'] = optimize_signature(form_data['signature_reception'])
+        
+        if form_data['signature_retour']:
+            form_data['signature_retour'] = optimize_signature(form_data['signature_retour'])
+        
+        # Optimiser les photos si présentes
+        for field in photo_base_fields:
+            photo_key = f'photo_{field}'
+            if photo_key in form_data and form_data[photo_key]:
+                optimized_photos = []
+                for photo in form_data[photo_key]:
+                    if photo:
+                        optimized_photos.append(optimize_signature(photo))
+                form_data[photo_key] = optimized_photos
+        
+        # Ajouter la date de génération
+        form_data['date_generation'] = datetime.now().strftime('%d/%m/%Y %H:%M')
+        
+        # Générer le HTML pour le PDF
+        html_content = render_template('pdf_template.html', **form_data)
+        
+        # Générer le PDF en mémoire avec WeasyPrint
+        base_url = request.url_root
+        pdf_bytes = HTML(string=html_content, base_url=base_url).write_pdf()
+        
+        # Créer un nom de fichier sécurisé
+        chantier_safe = "".join(c for c in form_data['chantier'] if c.isalnum() or c in (' ', '-', '_')).strip()
+        date_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"PV_{chantier_safe}_{date_str}.pdf"
+        
+        # Sauvegarder le PV avant le téléchargement
+        pv_id = request.form.get('pv_id')
+        if not pv_id:
+            # Générer un nouvel ID si le PV n'en a pas
+            pv_id = str(uuid.uuid4())
+        
+        # Préparer les données pour la sauvegarde
+        pv_data = {
+            'id': pv_id,
+            'chantier': form_data['chantier'],
+            'created_at': datetime.now().isoformat(),
+            'updated_at': datetime.now().isoformat(),
+            'status': 'downloaded',  # Marquer comme téléchargé
+            'form_data': form_data
+        }
+        
+        # Sauvegarder dans un fichier JSON
+        file_path = SAVED_PV_DIR / f"{pv_id}.json"
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(pv_data, f, ensure_ascii=False, indent=2)
+        
+        # Retourner le PDF en base64 pour le téléchargement côté client
+        pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+        
+        return jsonify({
+            'success': True,
+            'pdf_data': pdf_base64,
+            'filename': filename,
+            'pv_id': pv_id
+        })
+    
+    except Exception as e:
+        print(f"Erreur lors de la génération du PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': f'Erreur lors de la génération du PDF: {str(e)}'
         }), 500
 
 
