@@ -128,16 +128,7 @@ def send_email_with_pdf(pdf_bytes, recipients, chantier_name, date_reception):
     smtp_from_name = config.get('smtp_from_name', 'Centrale Lyon Conseil')
     
     if not smtp_username or not smtp_password:
-        return False, """⚠️ Configuration email non configurée. 
-        
-Pour activer l'envoi automatique des PV par email, cliquez sur le bouton "⚙️ Configuration" en haut de la page et remplissez les paramètres SMTP.
-
-📧 Pour Gmail : utilisez un "Mot de passe d'application" (pas votre mot de passe habituel)
-   → Allez sur https://myaccount.google.com/apppasswords
-   → Créez un nouveau mot de passe d'application
-   → Utilisez-le dans le champ "Mot de passe SMTP"
-
-ℹ️ Sans cette configuration, le PDF sera généré mais ne pourra pas être envoyé automatiquement."""
+        return False, """⚠️ Configuration email non configurée. Cliquez sur "⚙️ Configuration Email" en haut de la page pour activer l'envoi automatique par email."""
     
     # Convertir en liste si c'est une seule adresse
     if isinstance(recipients, str):

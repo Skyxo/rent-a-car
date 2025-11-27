@@ -48,6 +48,22 @@ h5 {
     margin-bottom: 0.25rem !important;
 }
 
+/* Bouton toggle password compact */
+.btn-toggle-password {
+    width: 100px !important;
+    min-width: 100px !important;
+    max-width: 100px !important;
+    padding: 0.25rem 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+}
+
+.btn-toggle-password i {
+    font-size: 0.75rem !important;
+}
+
 /* Header */
 .clc-header {
     background: linear-gradient(135deg, var(--clc-navy) 0%, #002a5c 100%);

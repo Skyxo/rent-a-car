@@ -6,24 +6,38 @@ Application web professionnelle développée pour **France Montage - Groupe Bria
 
 ### ✨ Fonctionnalités Principales
 
+#### Création et Gestion de PV
 - ✅ **Formulaire de contrôle complet** : Saisie guidée pour réception et retour de matériel
 - 📸 **Upload de photos** : Ajout de photos pour chaque poste d'inspection avec observations
 - ✍️ **Signatures électroniques** : Capture tactile des visas loueur et locataire (compatible mobile)
 - 📄 **Génération PDF automatique** : Documents professionnels avec insertion des photos et signatures
 - 📧 **Envoi par email** : Email automatique avec PDF en pièce jointe au conducteur de travaux
 - 💾 **Sauvegarde automatique** : Protection contre la perte de données (localStorage 24h)
-- 🔄 **Gestion des PV** : Sauvegarde, chargement et reprise des PV en cours (brouillons, envoyés)
+
+#### Interface de Gestion Moderne
+- 🎴 **Vue en cartes visuelles** : Affichage moderne et intuitif des PV avec badges de statut
+- 🔍 **Recherche en temps réel** : Filtrage instantané par chantier, client, machine ou n° série
+- 🏷️ **Filtres par statut** : Brouillon, Envoyé, Téléchargé, ou Tous
+- 📜 **Scrolling optimisé** : Conteneur défilant avec indicateur visuel pour des dizaines de PV
+- 📊 **Mode compact automatique** : Interface dense activée automatiquement avec 10+ PV
+- 🎯 **Sélection visuelle** : Feedback immédiat avec surbrillance de la carte sélectionnée
+- ♻️ **Réinitialisation automatique** : Formulaire nettoyé automatiquement lors du chargement ou création
+
+#### Configuration et Optimisation
 - ⚙️ **Configuration SMTP** : Paramètres email configurables via interface web
 - 📱 **100% Responsive** : Interface mobile-first optimisée pour tablettes et smartphones de chantier
 - 🎨 **Charte graphique** : Respect de l'identité visuelle France Montage - Groupe Briand
+- ⚡ **Performance optimisée** : Gestion fluide de 100+ PV sans ralentissement
 
 ---
 
-## 🚀 ACCÈS EN PRODUCTION
+## 🚀 DÉPLOIEMENT
 
-### 🌐 URL : **http://188.137.240.250**
+### 🌐 Application Web
 
-L'application est déployée et accessible 24h/24, 7j/7 depuis n'importe quel navigateur moderne.
+L'application doit être déployée sur un serveur dédié. Le client est responsable de l'hébergement et de la maintenance de son propre serveur.
+
+> 📖 **Guide de déploiement complet** : Consultez [DEPLOY.md](DEPLOY.md) pour les instructions détaillées d'installation sur serveur.
 
 ### Premier accès
 
@@ -163,13 +177,43 @@ docker run -d -p 80:5000 --name pv-materiel pv-materiel
    - **"Télécharger PDF"** : Générer et télécharger le PDF immédiatement
    - **"Valider et Envoyer par Email"** : Générer le PDF et l'envoyer automatiquement
 
+### Gestion des PV existants
+
+#### Interface moderne en cartes
+- **Vue en cartes** : Chaque PV est affiché sous forme de carte visuelle avec :
+  - Nom du chantier en titre
+  - Client, machine et date en sous-titre
+  - Badge de statut coloré (Brouillon / Envoyé / Téléchargé)
+  - Indicateur de sélection visuel
+
+#### Recherche et filtrage
+- **Barre de recherche** : Filtrage instantané en tapant n'importe quel terme
+  - Recherche dans : chantier, client, machine, modèle, n° série
+  - Mise à jour en temps réel sans rechargement
+- **Filtre par statut** : Menu déroulant pour filtrer par état
+  - Tous (défaut)
+  - Brouillon
+  - Envoyé
+  - Téléchargé
+
+#### Optimisation pour grand volume
+- **Scrolling intelligent** : Liste défilante avec max-height 500px
+- **Indicateur de scroll** : Dégradé visuel en bas si plus de contenu
+- **Mode compact** : Activé automatiquement avec 10+ PV pour densifier l'affichage
+- **Performance** : Gère facilement 100+ PV sans ralentissement
+
+#### Actions disponibles
+- **Charger** : Ouvre le PV sélectionné dans le formulaire (avec nettoyage automatique)
+- **Supprimer** : Supprime le PV après confirmation
+- **Créer nouveau** : Réinitialise complètement le formulaire (barres carburant à 0, photos effacées)
+
 ### Fonctionnalités avancées
 
 - **Sauvegarde automatique locale** : Toutes les 500ms dans le localStorage (expire après 24h)
-- **Gestion des PV existants** : Charger, modifier, compléter des PV sauvegardés
-- **Statuts des PV** : Nouveau, Brouillon, Envoyé, Téléchargé
+- **Restauration intelligente** : Photos et signatures restaurées au chargement d'un PV
 - **Déselection des boutons radio** : Cliquer à nouveau pour déselectionner un état
-- **Photos persistantes** : Les photos sont sauvegardées avec le PV et restaurées au chargement
+- **Gestion des images** : Upload, prévisualisation, compression et persistence
+- **Sélection de texte visible** : Correction CSS pour sélection de texte lisible
 
 ---
 
@@ -177,7 +221,7 @@ docker run -d -p 80:5000 --name pv-materiel pv-materiel
 
 ```
 rent-a-car/
-├── server.py                  # Serveur Flask principal (801 lignes)
+├── server.py                  # Serveur Flask principal (800+ lignes)
 │                              # - Routes : index, submit, download-pdf, config SMTP
 │                              # - Génération PDF avec WeasyPrint
 │                              # - Envoi email SMTP
@@ -193,7 +237,8 @@ rent-a-car/
 │   ├── index.html             # Formulaire principal (responsive)
 │   │                          # - Formulaire Réception/Retour
 │   │                          # - Upload photos, signatures canvas
-│   │                          # - Gestion localStorage (auto-save)
+│   │                          # - Interface de gestion moderne (cartes)
+│   │                          # - Sauvegarde localStorage (auto-save)
 │   │
 │   └── pdf_template.html      # Template PDF (Jinja2 + WeasyPrint)
 │                              # - Mise en page A4 single-page
@@ -201,16 +246,21 @@ rent-a-car/
 │                              # - Logos France Montage + QPE
 │
 ├── static/
-│   ├── script.js              # Logique JavaScript (1355 lignes)
+│   ├── script.js              # Logique JavaScript (1500+ lignes)
 │   │                          # - Gestion signatures (SignaturePad)
 │   │                          # - Upload et gestion photos (Base64)
 │   │                          # - Auto-save localStorage (24h expiry)
 │   │                          # - Déselection radio buttons
-│   │                          # - Gestion PV (load, save, create)
+│   │                          # - Interface moderne de gestion PV (cartes)
+│   │                          # - Recherche/filtrage en temps réel
+│   │                          # - Mode compact automatique (10+ PV)
+│   │                          # - Détection scrolling et indicateurs
 │   │
-│   ├── style.css              # Styles CSS (1013 lignes)
+│   ├── style.css              # Styles CSS (1100+ lignes)
 │   │                          # - Charte graphique France Montage
 │   │                          # - Responsive mobile-first
+│   │                          # - Styles cartes PV avec animations
+│   │                          # - Mode compact et scrolling optimisé
 │   │                          # - Surcharges Bootstrap
 │   │
 │   ├── logo.png               # Logo France Montage (PDF)
@@ -223,16 +273,16 @@ rent-a-car/
 ├── saved_pv/                  # PV sauvegardés (fichiers JSON)
 │   └── <uuid>.json            # Format : {form_data, photos, status, timestamp}
 │
-├── deploy/                    # Scripts de déploiement
-│   ├── quick-deploy.sh        # Déploiement rapide
-│   ├── test-connexion.sh      # Test SSH
-│   └── pv-materiel.service    # Service systemd
+├── deploy.sh                  # Script de déploiement automatique
+│                              # - Installation complète
+│                              # - Mise à jour rapide
+│                              # - Redémarrage et logs
 │
-├── Dockerfile                 # Configuration Docker
-├── gunicorn_config.py         # Configuration Gunicorn
-├── README.md                  # Documentation (ce fichier)
+├── README.md                  # Documentation technique (ce fichier)
 ├── GUIDE_UTILISATEUR.md       # Guide utilisateur final
-└── DEPLOY.md                  # Guide de déploiement
+├── DEPLOY.md                  # Guide de déploiement détaillé
+│
+└── .gitignore                 # Fichiers ignorés par Git
 ```
 
 ---
@@ -339,9 +389,24 @@ sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0
 
 ## 📚 Documentation
 
+### Documentation Utilisateur
 - **[GUIDE_UTILISATEUR.md](GUIDE_UTILISATEUR.md)** : Guide complet pour les utilisateurs finaux
+- **[LIVRABLE.md](LIVRABLE.md)** : Documentation de livraison succincte
+
+### Documentation Technique
 - **[DEPLOY.md](DEPLOY.md)** : Instructions détaillées de déploiement sur serveur
-- **[CHANGELOG_FMB.md](CHANGELOG_FMB.md)** : Historique des modifications et versions
+- **[README.md](README.md)** : Documentation technique (ce fichier)
+
+### Documentation Projet
+- **[LIVRAISON_FINALE.md](LIVRAISON_FINALE.md)** : Document de livraison complet
+- **[INDEX.md](INDEX.md)** : Index de navigation de toute la documentation
+- **[AIDE_MEMOIRE_LIVRAISON.md](AIDE_MEMOIRE_LIVRAISON.md)** : Guide pour préparer le livrable client
+
+### Documentation LaTeX (Overleaf)
+- **[documentation/documentation_utilisateur.tex](documentation/documentation_utilisateur.tex)** : Documentation LaTeX professionnelle
+- **[documentation/GUIDE_OVERLEAF.md](documentation/GUIDE_OVERLEAF.md)** : Guide de compilation sur Overleaf
+- **[documentation/LOGO_JE_OVERLEAF.md](documentation/LOGO_JE_OVERLEAF.md)** : Intégration du logo Junior-Entreprise
+- **[documentation/biblio.bib](documentation/biblio.bib)** : Bibliographie
 
 ---
 
@@ -349,11 +414,33 @@ sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0
 
 Pour déployer l'application sur un serveur de production, consultez le guide détaillé : **[DEPLOY.md](DEPLOY.md)**
 
-Scripts de déploiement disponibles :
+### Déploiement automatique (recommandé)
+
 ```bash
-./deploy/quick-deploy.sh      # Déploiement automatique (recommandé)
-./deploy/test-connexion.sh    # Test de connexion SSH
+# 1. Configurer le script deploy.sh
+# Éditer les variables SSH_USER, SSH_HOST, APP_DIR en haut du fichier
+
+# 2. Lancer l'installation complète
+./deploy.sh install
+
+# 3. Pour les mises à jour ultérieures
+./deploy.sh update
 ```
+
+### Commandes disponibles
+
+```bash
+./deploy.sh install    # Installation complète
+./deploy.sh update     # Mise à jour rapide
+./deploy.sh restart    # Redémarrage du service
+./deploy.sh logs       # Afficher les logs en temps réel
+./deploy.sh status     # Statut du service
+./deploy.sh test       # Tester la connexion SSH
+```
+
+### Déploiement manuel
+
+Consultez **[DEPLOY.md](DEPLOY.md)** pour les instructions détaillées pas à pas.
 
 ---
 
@@ -367,9 +454,9 @@ Projet développé pour **France Montage - Groupe Briand** dans le cadre de la d
 
 Pour toute question, assistance ou suggestion d'amélioration :
 
-- **Déploiement** : Serveur 188.137.240.250
-- **Application** : http://188.137.240.250
-- **Documentation** : Voir les fichiers `GUIDE_UTILISATEUR.md` et `DEPLOY.md`
+- **Hébergement** : À la charge du client (serveur dédié requis)
+- **Déploiement** : Voir le guide complet dans `DEPLOY.md`
+- **Documentation** : Consulter `GUIDE_UTILISATEUR.md` et `DEPLOY.md`
 
 ---
 
