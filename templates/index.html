@@ -30,7 +30,7 @@
         </div>
     </header>
 
-    <main class="container my-3">
+    <main class="container my-3" style="max-width: 1400px; margin-left: auto; margin-right: auto;">
         <!-- Messages Flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -71,7 +71,7 @@
                 </div>
 
                 <!-- Actions rapides -->
-                <div class="row g-3 mb-4">
+                <div class="row g-3 mb-4 justify-content-center">
                     <div class="col-md-4">
                         <button type="button" class="btn btn-outline-primary w-100 py-3" id="saveDraftBtnTop">
                             <i class="fas fa-save fa-2x d-block mb-2"></i>
@@ -190,13 +190,41 @@
                 </div>
             </div>
 
+            <!-- Section: Type de PV -->
+            <div class="card mb-4 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-clipboard-list"></i> Type de Procès-Verbal
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Sélectionnez le type de PV à remplir <span class="text-danger">*</span></label>
+                            <div class="btn-group w-100" role="group" aria-label="Type de PV">
+                                <input type="radio" class="btn-check" name="pv_type" id="pv_type_reception" value="reception" checked>
+                                <label class="btn btn-outline-primary btn-lg" for="pv_type_reception">
+                                    <i class="fas fa-arrow-down me-2"></i>Réception
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="pv_type" id="pv_type_retour" value="retour">
+                                <label class="btn btn-outline-primary btn-lg" for="pv_type_retour">
+                                    <i class="fas fa-arrow-up me-2"></i>Retour
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-2">
+                                <i class="fas fa-info-circle"></i> Choisissez "Réception" pour l'arrivée du matériel sur chantier, ou "Retour" pour son départ du chantier.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Section 2: Dates et Compteurs -->
             <div class="card mb-4">
                 <div class="card-header clc-card-header">
                     <i class="fas fa-calendar-alt"></i> Dates et Compteurs
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row justify-content-center">
                         <div class="col-md-6">
                             <h5 class="text-clc-navy mb-3"><i class="fas fa-arrow-down"></i> Réception</h5>
                             <div class="mb-3">
@@ -636,8 +664,8 @@
                     <i class="fas fa-tint"></i> Fluides
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
+                    <div class="row justify-content-center">
+                        <div class="col-md-6 pv-reception-col">
                             <h5 class="text-clc-navy mb-3">Réception</h5>
                             
                             <div class="mb-3">
@@ -650,6 +678,16 @@
                                     <span>3/4</span>
                                     <span>Plein</span>
                                 </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-camera"></i> Photo du carburant (Réception)</label>
+                                <div class="photo-cell-wrapper">
+                                    <div class="multi-photo-container" id="photos_carburant_reception">
+                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_carburant_reception" accept="image/*" data-container="photos_carburant_reception" data-field="carburant_reception" multiple>
+                                    </div>
+                                </div>
+                                <small class="text-muted">Photo de la jauge de carburant</small>
                             </div>
                             
                             <div class="mb-3">
@@ -700,7 +738,7 @@
                             </div>
                         </div>
                         
-                        <div class="col-md-6">
+                        <div class="col-md-6 pv-retour-col">
                             <h5 class="text-clc-navy mb-3">Retour</h5>
                             
                             <div class="mb-3">
@@ -713,6 +751,16 @@
                                     <span>3/4</span>
                                     <span>Plein</span>
                                 </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-camera"></i> Photo du carburant (Retour)</label>
+                                <div class="photo-cell-wrapper">
+                                    <div class="multi-photo-container" id="photos_carburant_retour">
+                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_carburant_retour" accept="image/*" data-container="photos_carburant_retour" data-field="carburant_retour" multiple>
+                                    </div>
+                                </div>
+                                <small class="text-muted">Photo de la jauge de carburant</small>
                             </div>
                             
                             <div class="mb-3">
@@ -772,8 +820,8 @@
                     <i class="fas fa-comment"></i> Observations
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                    <div class="row justify-content-center">
+                        <div class="col-md-6 mb-3 pv-reception-col">
                             <label for="observations_reception" class="form-label">Observations Réception</label>
                             <textarea class="form-control" id="observations_reception" name="observations_reception" rows="4"></textarea>
                             
@@ -787,7 +835,7 @@
                                 <small class="text-muted">Ajoutez des photos pour illustrer vos observations</small>
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6 mb-3 pv-retour-col">
                             <label for="observations_retour" class="form-label">Observations Retour</label>
                             <textarea class="form-control" id="observations_retour" name="observations_retour" rows="4"></textarea>
                             
@@ -811,7 +859,7 @@
                     <i class="fas fa-signature"></i> Signatures
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row justify-content-center">
                         <div class="col-md-6 mb-4">
                             <h5 class="text-clc-navy mb-3">VISA Réception</h5>
                             <div class="signature-container">
@@ -844,7 +892,7 @@
             <!-- Boutons d'action -->
             <div class="card mb-4 border-0 shadow-sm">
                 <div class="card-body">
-                    <div class="row g-3">
+                    <div class="row g-3 justify-content-center">
                         <div class="col-md-4">
                             <button type="button" class="btn btn-outline-primary btn-lg w-100" id="saveDraftBtn">
                                 <i class="fas fa-save"></i> Sauvegarder le PV

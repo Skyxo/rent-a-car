@@ -24,13 +24,14 @@ document.addEventListener('DOMContentLoaded', function() {
     initializePVManagement();
     loadSavedPVList();
     initializeRadioDeselect();
+    initializePVTypeToggle();
 });
 
 /**
  * Permet de désélectionner les boutons radio en cliquant dessus une seconde fois
  */
 function initializeRadioDeselect() {
-    const radioButtons = document.querySelectorAll('input[type="radio"]');
+    const radioButtons = document.querySelectorAll('input[type="radio"]:not([name="pv_type"])');
     
     radioButtons.forEach(radio => {
         radio.addEventListener('click', function(e) {
@@ -55,6 +56,122 @@ function initializeRadioDeselect() {
             radio.dataset.checked = 'true';
         }
     });
+}
+
+/**
+ * Gère l'affichage conditionnel des colonnes Réception/Retour selon le type de PV
+ */
+function initializePVTypeToggle() {
+    const pvTypeReception = document.getElementById('pv_type_reception');
+    const pvTypeRetour = document.getElementById('pv_type_retour');
+    
+    function togglePVColumns(type) {
+        // Sélectionner tous les tableaux d'inspection
+        const tables = document.querySelectorAll('.inspection-table');
+        
+        tables.forEach(table => {
+            const headers = table.querySelectorAll('thead th');
+            const rows = table.querySelectorAll('tbody tr');
+            
+            if (type === 'reception') {
+                // Afficher colonnes Réception (index 1 et 2), masquer Retour (index 3 et 4)
+                if (headers.length >= 5) {
+                    headers[1].style.display = '';
+                    headers[2].style.display = '';
+                    headers[3].style.display = 'none';
+                    headers[4].style.display = 'none';
+                }
+                
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 5) {
+                        cells[1].style.display = '';
+                        cells[2].style.display = '';
+                        cells[3].style.display = 'none';
+                        cells[4].style.display = 'none';
+                    }
+                });
+            } else {
+                // Masquer colonnes Réception, afficher Retour
+                if (headers.length >= 5) {
+                    headers[1].style.display = 'none';
+                    headers[2].style.display = 'none';
+                    headers[3].style.display = '';
+                    headers[4].style.display = '';
+                }
+                
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 5) {
+                        cells[1].style.display = 'none';
+                        cells[2].style.display = 'none';
+                        cells[3].style.display = '';
+                        cells[4].style.display = '';
+                    }
+                });
+            }
+        });
+        
+        // Gérer les sections Date/Compteur et Signatures
+        const receptionSections = document.querySelectorAll('[class*="reception"], .col-md-6:has(#date_reception)');
+        const retourSections = document.querySelectorAll('[class*="retour"], .col-md-6:has(#date_retour)');
+        
+        // Section Dates et Compteurs
+        const dateReceptionCol = document.querySelector('.col-md-6:has(#date_reception)');
+        const dateRetourCol = document.querySelector('.col-md-6:has(#date_retour)');
+        
+        if (type === 'reception') {
+            if (dateReceptionCol) dateReceptionCol.style.display = '';
+            if (dateRetourCol) dateRetourCol.style.display = 'none';
+        } else {
+            if (dateReceptionCol) dateReceptionCol.style.display = 'none';
+            if (dateRetourCol) dateRetourCol.style.display = '';
+        }
+        
+        // Section Fluides et Observations - utiliser les classes pv-reception-col et pv-retour-col
+        const receptionCols = document.querySelectorAll('.pv-reception-col');
+        const retourCols = document.querySelectorAll('.pv-retour-col');
+        
+        if (type === 'reception') {
+            receptionCols.forEach(col => col.style.display = '');
+            retourCols.forEach(col => col.style.display = 'none');
+        } else {
+            receptionCols.forEach(col => col.style.display = 'none');
+            retourCols.forEach(col => col.style.display = '');
+        }
+        
+        // Section Signatures
+        const signatureReceptionCol = document.querySelector('.col-md-6:has(#signatureReception)');
+        const signatureRetourCol = document.querySelector('.col-md-6:has(#signatureRetour)');
+        
+        if (type === 'reception') {
+            if (signatureReceptionCol) signatureReceptionCol.style.display = '';
+            if (signatureRetourCol) signatureRetourCol.style.display = 'none';
+        } else {
+            if (signatureReceptionCol) signatureReceptionCol.style.display = 'none';
+            if (signatureRetourCol) signatureRetourCol.style.display = '';
+        }
+    }
+    
+    // Écouteurs d'événements
+    if (pvTypeReception) {
+        pvTypeReception.addEventListener('change', function() {
+            if (this.checked) {
+                togglePVColumns('reception');
+            }
+        });
+    }
+    
+    if (pvTypeRetour) {
+        pvTypeRetour.addEventListener('change', function() {
+            if (this.checked) {
+                togglePVColumns('retour');
+            }
+        });
+    }
+    
+    // Initialiser l'affichage au chargement (Réception par défaut)
+    togglePVColumns('reception');
 }
 
 /**
@@ -597,15 +714,71 @@ function initializePVManagement() {
     // Intercepter la soumission du formulaire
     const pvForm = document.getElementById('pvForm');
     if (pvForm) {
-        pvForm.addEventListener('submit', function(e) {
+        pvForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
             // Vérifier les champs obligatoires
             const chantier = document.getElementById('chantier').value;
             const emailDest = document.getElementById('email_destinataire').value;
             
             if (!chantier || !emailDest) {
-                e.preventDefault();
                 alert('Le chantier et l\'email destinataire sont obligatoires pour envoyer le PV.');
                 return false;
+            }
+            
+            // Sauvegarder le PV d'abord
+            const saveResult = await savePVDraft(true); // true = silencieux
+            if (!saveResult) {
+                alert('Impossible de sauvegarder le PV avant envoi');
+                return false;
+            }
+            
+            // Créer un nouveau FormData avec les signatures
+            const formData = new FormData(pvForm);
+            
+            // Ajouter les signatures au FormData
+            if (signaturePadReception && !signaturePadReception.isEmpty()) {
+                const signatureBlob = await fetch(signaturePadReception.toDataURL('image/png')).then(r => r.blob());
+                formData.set('signature_reception', signatureBlob, 'signature_reception.png');
+            }
+            
+            if (signaturePadRetour && !signaturePadRetour.isEmpty()) {
+                const signatureBlob = await fetch(signaturePadRetour.toDataURL('image/png')).then(r => r.blob());
+                formData.set('signature_retour', signatureBlob, 'signature_retour.png');
+            }
+            
+            // Soumettre avec fetch au lieu de submit() pour garder le contrôle
+            try {
+                const response = await fetch(pvForm.action, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.redirected) {
+                    // Redirection réussie - recharger la page pour voir le message flash
+                    window.location.href = response.url;
+                } else if (response.ok) {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const data = await response.json();
+                        showNotification('success', data.message || 'PV envoyé par email avec succès');
+                    } else {
+                        // Réponse HTML - recharger pour voir le message flash
+                        window.location.reload();
+                    }
+                    // Recharger la liste des PV
+                    await loadSavedPVList();
+                } else {
+                    try {
+                        const data = await response.json();
+                        showNotification('danger', data.message || 'Erreur lors de l\'envoi du PV');
+                    } catch {
+                        showNotification('danger', 'Erreur lors de l\'envoi du PV');
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                showNotification('danger', 'Erreur lors de l\'envoi du PV');
             }
         });
     }
@@ -623,6 +796,10 @@ async function loadSavedPVList() {
             const select = document.getElementById('savedPVSelect');
             const container = document.getElementById('pvListContainer');
             const countBadge = document.getElementById('pvCountBadge');
+            const searchSection = document.getElementById('pvSearchSection');
+            
+            // Sauvegarder l'état du collapse avant de recharger
+            const wasCollapsed = searchSection && searchSection.classList.contains('collapsed');
             
             if (!select || !container) return;
             
@@ -1008,13 +1185,20 @@ async function deletePVById(pvId) {
 
 /**
  * Sauvegarde le PV en cours comme brouillon
+ * @param {Event|boolean} eventOrSilent - L'événement click ou un booléen silent
+ * @returns {Promise<boolean>} - true si succès, false sinon
  */
-async function savePVDraft() {
+async function savePVDraft(eventOrSilent) {
+    // Déterminer si c'est un événement ou un booléen
+    const silent = typeof eventOrSilent === 'boolean' ? eventOrSilent : false;
+    
     try {
         const btn = document.getElementById('saveDraftBtn');
-        const originalText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde...';
+        if (btn && !silent) {
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde...';
+        }
         
         // Récupérer toutes les données du formulaire
         const formData = gatherFormData();
@@ -1044,8 +1228,10 @@ async function savePVDraft() {
             // Effacer la sauvegarde automatique locale car les données sont maintenant sauvegardées
             localStorage.removeItem('pvMaterielFormData');
             
-            // Afficher message de succès
-            showNotification('success', data.message);
+            // Afficher message de succès seulement si pas en mode silent
+            if (!silent) {
+                showNotification('success', data.message);
+            }
             
             // Recharger la liste
             await loadSavedPVList();
@@ -1055,31 +1241,60 @@ async function savePVDraft() {
             if (select) {
                 select.value = currentPVId;
             }
+            
+            if (btn && !silent) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Sauvegarder le PV';
+            }
+            
+            return true;
         } else {
-            showNotification('danger', data.message);
+            if (!silent) {
+                showNotification('danger', data.message);
+            }
+            
+            if (btn && !silent) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Sauvegarder le PV';
+            }
+            
+            return false;
         }
-        
-        btn.disabled = false;
-        btn.innerHTML = originalText;
     } catch (error) {
         console.error('Erreur lors de la sauvegarde:', error);
-        showNotification('danger', 'Erreur lors de la sauvegarde du PV');
+        if (!silent) {
+            showNotification('danger', 'Erreur lors de la sauvegarde du PV');
+        }
         
         const btn = document.getElementById('saveDraftBtn');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-save"></i> Sauvegarder le PV';
+        if (btn && !silent) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Sauvegarder le PV';
+        }
+        
+        return false;
     }
 }
 
 /**
  * Télécharge le PV au format PDF
  */
-async function downloadPVAsPDF() {
+async function downloadPVAsPDF(event) {
     try {
+        // Sauvegarder le PV d'abord
+        const saveResult = await savePVDraft(true); // true = silencieux, pas de notification
+        if (!saveResult) {
+            showNotification('warning', 'Impossible de sauvegarder le PV avant téléchargement');
+            return;
+        }
+        
         // Déterminer quel bouton a été cliqué
-        const btnBottom = document.getElementById('downloadPVBtn');
-        const btnTop = document.getElementById('downloadPVBtnTop');
-        const btn = event.target.closest('button');
+        const btn = event ? event.target.closest('button') : document.getElementById('downloadPVBtn');
+        
+        if (!btn) {
+            console.error('Bouton non trouvé');
+            return;
+        }
         
         const originalText = btn.innerHTML;
         btn.disabled = true;
@@ -1088,6 +1303,17 @@ async function downloadPVAsPDF() {
         // Récupérer les données du formulaire
         const form = document.getElementById('pvForm');
         const formData = new FormData(form);
+        
+        // Ajouter les signatures au FormData
+        if (signaturePadReception && !signaturePadReception.isEmpty()) {
+            const signatureBlob = await fetch(signaturePadReception.toDataURL('image/png')).then(r => r.blob());
+            formData.set('signature_reception', signatureBlob, 'signature_reception.png');
+        }
+        
+        if (signaturePadRetour && !signaturePadRetour.isEmpty()) {
+            const signatureBlob = await fetch(signaturePadRetour.toDataURL('image/png')).then(r => r.blob());
+            formData.set('signature_retour', signatureBlob, 'signature_retour.png');
+        }
         
         // Validation du champ obligatoire
         const chantier = formData.get('chantier');

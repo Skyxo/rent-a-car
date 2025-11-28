@@ -1,0 +1,26 @@
+{
+  "id": "22c668fc-264c-4c37-87e3-8eb15a56f2d4",
+  "chantier": "",
+  "created_at": "2025-11-28T12:42:34.689Z",
+  "updated_at": "2025-11-28T13:42:35.723931",
+  "status": "draft",
+  "form_data": {
+    "pv_id": "",
+    "chantier": "",
+    "email_conducteur": "",
+    "materiel_numero": "",
+    "materiel_type": "",
+    "fournisseur": "",
+    "responsable": "",
+    "pv_type": "reception",
+    "date_reception": "",
+    "compteur_reception": "",
+    "date_retour": "",
+    "compteur_retour": "",
+    "carburant_reception": "0",
+    "carburant_retour": "0",
+    "observations_reception": "",
+    "observations_retour": "",
+    "created_at": "2025-11-28T12:42:34.689Z"
+  }
+}

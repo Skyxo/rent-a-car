@@ -1,0 +1,25 @@
+{
+  "id": "2531c8c5-1952-4638-a867-8e949e4608a3",
+  "chantier": "ABCD",
+  "created_at": "2025-11-28T08:19:54.325Z",
+  "updated_at": "2025-11-28T09:19:54.330481",
+  "status": "draft",
+  "form_data": {
+    "pv_id": "",
+    "chantier": "ABCD",
+    "email_conducteur": "",
+    "materiel_numero": "",
+    "materiel_type": "",
+    "fournisseur": "",
+    "responsable": "",
+    "date_reception": "",
+    "compteur_reception": "",
+    "date_retour": "",
+    "compteur_retour": "",
+    "carburant_reception": "0",
+    "carburant_retour": "0",
+    "observations_reception": "",
+    "observations_retour": "",
+    "created_at": "2025-11-28T08:19:54.325Z"
+  }
+}

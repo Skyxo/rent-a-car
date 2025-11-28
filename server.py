@@ -248,10 +248,31 @@ def submit():
             'observations_reception': request.form.get('observations_reception', ''),
             'observations_retour': request.form.get('observations_retour', ''),
             
-            # Signatures
-            'signature_reception': request.form.get('signature_reception', ''),
-            'signature_retour': request.form.get('signature_retour', ''),
+            # Signatures - vérifier d'abord dans files (envoi depuis JS), puis dans form (sauvegarde JSON)
+            'signature_reception': '',
+            'signature_retour': '',
         }
+        
+        # Gérer les signatures qui peuvent venir de request.files (Blob) ou request.form (base64)
+        if 'signature_reception' in request.files:
+            sig_file = request.files['signature_reception']
+            if sig_file and sig_file.filename:
+                # Lire le fichier et le convertir en base64
+                import base64
+                sig_data = sig_file.read()
+                form_data['signature_reception'] = f"data:image/png;base64,{base64.b64encode(sig_data).decode('utf-8')}"
+        elif request.form.get('signature_reception'):
+            form_data['signature_reception'] = request.form.get('signature_reception', '')
+        
+        if 'signature_retour' in request.files:
+            sig_file = request.files['signature_retour']
+            if sig_file and sig_file.filename:
+                # Lire le fichier et le convertir en base64
+                import base64
+                sig_data = sig_file.read()
+                form_data['signature_retour'] = f"data:image/png;base64,{base64.b64encode(sig_data).decode('utf-8')}"
+        elif request.form.get('signature_retour'):
+            form_data['signature_retour'] = request.form.get('signature_retour', '')
         
         # Récupérer toutes les photos (qui peuvent avoir des noms comme photo_carrosserie_reception_1, photo_carrosserie_reception_2, etc.)
         photo_base_fields = ['carrosserie_reception', 'carrosserie_retour',
@@ -265,6 +286,7 @@ def submit():
                              'nacelles_reception', 'nacelles_retour',
                              'securite_reception', 'securite_retour',
                              'fuite_reception', 'fuite_retour',
+                             'carburant_reception', 'carburant_retour',
                              'observation_reception', 'observation_retour']
         
         for field in photo_base_fields:
@@ -686,10 +708,31 @@ def download_pdf():
             'observations_reception': request.form.get('observations_reception', ''),
             'observations_retour': request.form.get('observations_retour', ''),
             
-            # Signatures
-            'signature_reception': request.form.get('signature_reception', ''),
-            'signature_retour': request.form.get('signature_retour', ''),
+            # Signatures - vérifier d'abord dans files (envoi depuis JS), puis dans form (sauvegarde JSON)
+            'signature_reception': '',
+            'signature_retour': '',
         }
+        
+        # Gérer les signatures qui peuvent venir de request.files (Blob) ou request.form (base64)
+        if 'signature_reception' in request.files:
+            sig_file = request.files['signature_reception']
+            if sig_file and sig_file.filename:
+                # Lire le fichier et le convertir en base64
+                import base64
+                sig_data = sig_file.read()
+                form_data['signature_reception'] = f"data:image/png;base64,{base64.b64encode(sig_data).decode('utf-8')}"
+        elif request.form.get('signature_reception'):
+            form_data['signature_reception'] = request.form.get('signature_reception', '')
+        
+        if 'signature_retour' in request.files:
+            sig_file = request.files['signature_retour']
+            if sig_file and sig_file.filename:
+                # Lire le fichier et le convertir en base64
+                import base64
+                sig_data = sig_file.read()
+                form_data['signature_retour'] = f"data:image/png;base64,{base64.b64encode(sig_data).decode('utf-8')}"
+        elif request.form.get('signature_retour'):
+            form_data['signature_retour'] = request.form.get('signature_retour', '')
         
         # Récupérer toutes les photos
         photo_base_fields = ['carrosserie_reception', 'carrosserie_retour',
@@ -703,6 +746,7 @@ def download_pdf():
                              'nacelles_reception', 'nacelles_retour',
                              'securite_reception', 'securite_retour',
                              'fuite_reception', 'fuite_retour',
+                             'carburant_reception', 'carburant_retour',
                              'observation_reception', 'observation_retour']
         
         for field in photo_base_fields:
