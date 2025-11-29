@@ -15,6 +15,17 @@ let signaturePadRetour = null;
 let currentPVId = null;
 let pvStatus = 'new'; // 'new', 'draft', 'sent'
 
+// Variables pour l'auto-sauvegarde
+let autoSaveTimer = null;
+let lastAutoSave = null;
+let isAutoSaving = false;
+let hasUnsavedChanges = false;
+const AUTO_SAVE_DELAY = 3000; // 3 secondes après la dernière modification
+const PERIODIC_SAVE_INTERVAL = 30000; // 30 secondes
+
+// Champs avec historique
+const HISTORY_FIELDS = ['chantier', 'email_conducteur', 'email_entreprise', 'materiel_numero', 'materiel_type', 'fournisseur', 'responsable'];
+
 // Initialisation au chargement du DOM
 document.addEventListener('DOMContentLoaded', function() {
     initializeSignaturePads();
@@ -25,6 +36,11 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSavedPVList();
     initializeRadioDeselect();
     initializePVTypeToggle();
+    initializeSelect2Fields();
+    initializeStickyHeader();
+    initializeEmailEntreprise();
+    startPeriodicAutoSave();
+    initScrollNavigation();
 });
 
 /**
@@ -62,10 +78,32 @@ function initializeRadioDeselect() {
  * Gère l'affichage conditionnel des colonnes Réception/Retour selon le type de PV
  */
 function initializePVTypeToggle() {
-    const pvTypeReception = document.getElementById('pv_type_reception');
-    const pvTypeRetour = document.getElementById('pv_type_retour');
+    const pvTypeStickyReception = document.getElementById('pv_type_sticky_reception');
+    const pvTypeStickyRetour = document.getElementById('pv_type_sticky_retour');
     
     function togglePVColumns(type) {
+        // Mettre à jour les badges de titre de section
+        const badges = [
+            'pv_type_badge_dates',
+            'pv_type_badge_exterieur',
+            'pv_type_badge_fonctionnement',
+            'pv_type_badge_fluides',
+            'pv_type_badge_observations',
+            'pv_type_badge_signatures'
+        ];
+        
+        const label = type === 'reception' ? 'RÉCEPTION' : 'RETOUR';
+        const bgColor = type === 'reception' ? 'bg-success' : 'bg-info';
+        
+        badges.forEach(badgeId => {
+            const badge = document.getElementById(badgeId);
+            if (badge) {
+                badge.textContent = label;
+                badge.className = `badge ${bgColor} ms-2`;
+                badge.style.display = 'inline-block';
+            }
+        });
+        
         // Sélectionner tous les tableaux d'inspection
         const tables = document.querySelectorAll('.inspection-table');
         
@@ -153,17 +191,17 @@ function initializePVTypeToggle() {
         }
     }
     
-    // Écouteurs d'événements
-    if (pvTypeReception) {
-        pvTypeReception.addEventListener('change', function() {
+    // Écouteurs d'événements pour les boutons sticky
+    if (pvTypeStickyReception) {
+        pvTypeStickyReception.addEventListener('change', function() {
             if (this.checked) {
                 togglePVColumns('reception');
             }
         });
     }
     
-    if (pvTypeRetour) {
-        pvTypeRetour.addEventListener('change', function() {
+    if (pvTypeStickyRetour) {
+        pvTypeStickyRetour.addEventListener('change', function() {
             if (this.checked) {
                 togglePVColumns('retour');
             }
@@ -172,6 +210,54 @@ function initializePVTypeToggle() {
     
     // Initialiser l'affichage au chargement (Réception par défaut)
     togglePVColumns('reception');
+}
+
+/**
+ * Initialise le comportement sticky de l'en-tête Type de PV
+ */
+function initializeStickyHeader() {
+    const header = document.getElementById('stickyPVTypeHeader');
+    const placeholder = document.getElementById('stickyPlaceholder');
+    
+    if (!header || !placeholder) return;
+    
+    // Utiliser scroll event pour une détection précise
+    function checkSticky() {
+        const headerRect = header.getBoundingClientRect();
+        const headerHeight = header.offsetHeight;
+        
+        // Le header devient sticky quand son haut atteint ou dépasse le haut du viewport
+        if (headerRect.top <= 0 && !header.classList.contains('is-sticky')) {
+            // Activer le sticky
+            placeholder.style.height = headerHeight + 'px';
+            placeholder.style.display = 'block';
+            header.classList.add('is-sticky');
+        }
+        // Désactiver le sticky uniquement quand le placeholder revient en vue
+        else if (header.classList.contains('is-sticky')) {
+            const placeholderRect = placeholder.getBoundingClientRect();
+            // Vérifier si on a remonté jusqu'au placeholder
+            if (placeholderRect.top >= 0) {
+                header.classList.remove('is-sticky');
+                placeholder.style.display = 'none';
+            }
+        }
+    }
+    
+    // Écouter le scroll avec throttle pour performance
+    let ticking = false;
+    window.addEventListener('scroll', function() {
+        if (!ticking) {
+            window.requestAnimationFrame(function() {
+                checkSticky();
+                ticking = false;
+            });
+            ticking = true;
+        }
+    }, { passive: true });
+    
+    // Vérification initiale
+    checkSticky();
 }
 
 /**
@@ -191,6 +277,11 @@ function initializeSignaturePads() {
         });
         
         resizeCanvas(canvasReception, signaturePadReception);
+        
+        // Auto-sauvegarde après signature
+        signaturePadReception.addEventListener('endStroke', () => {
+            scheduleAutoSave();
+        });
     }
     
     if (canvasRetour) {
@@ -203,6 +294,11 @@ function initializeSignaturePads() {
         });
         
         resizeCanvas(canvasRetour, signaturePadRetour);
+        
+        // Auto-sauvegarde après signature
+        signaturePadRetour.addEventListener('endStroke', () => {
+            scheduleAutoSave();
+        });
     }
     
     // Redimensionner les canvas lors du resize de la fenêtre
@@ -262,10 +358,12 @@ function clearSignature(type) {
         signaturePadReception.clear();
         document.getElementById('signature_reception_data').value = '';
         saveFormData();
+        scheduleAutoSave();
     } else if (type === 'Retour' && signaturePadRetour) {
         signaturePadRetour.clear();
         document.getElementById('signature_retour_data').value = '';
         saveFormData();
+        scheduleAutoSave();
     }
 }
 
@@ -278,9 +376,101 @@ function initializeFormPersistence() {
     // Charger les données sauvegardées au démarrage
     loadFormData();
     
-    // Sauvegarder à chaque modification
+    // Sauvegarder à chaque modification (localStorage)
     form.addEventListener('change', saveFormData);
     form.addEventListener('input', debounce(saveFormData, 500));
+    
+    // Auto-sauvegarde IMMÉDIATE sur le serveur pour les changements (select, radio, checkbox)
+    form.addEventListener('change', function(e) {
+        // Sauvegarder immédiatement sans délai pour les changements de choix
+        performAutoSave();
+    });
+    
+    // Auto-sauvegarde avec délai pour les inputs texte (pour ne pas surcharger)
+    form.addEventListener('input', debounce(scheduleAutoSave, 1000));
+}
+
+/**
+ * Planifie une auto-sauvegarde sur le serveur
+ */
+function scheduleAutoSave() {
+    // Annuler le timer précédent s'il existe
+    if (autoSaveTimer) {
+        clearTimeout(autoSaveTimer);
+    }
+    
+    // Planifier une nouvelle sauvegarde après le délai
+    autoSaveTimer = setTimeout(async () => {
+        await performAutoSave();
+    }, AUTO_SAVE_DELAY);
+}
+
+/**
+ * Effectue la sauvegarde automatique sur le serveur
+ */
+async function performAutoSave() {
+    // Éviter les sauvegardes simultanées
+    if (isAutoSaving) {
+        console.log('⏳ Sauvegarde en cours, attente...');
+        return;
+    }
+    
+    // Vérifier qu'il y a un chantier (minimum requis)
+    const chantier = document.getElementById('chantier').value;
+    if (!chantier || chantier.trim() === '') {
+        console.log('Auto-sauvegarde ignorée : chantier vide');
+        return;
+    }
+    
+    isAutoSaving = true;
+    console.log('💾 Démarrage auto-sauvegarde...');
+    
+    try {
+        const result = await savePVDraft(true); // true = silent
+        if (result) {
+            lastAutoSave = new Date();
+            console.log('✅ Auto-sauvegarde effectuée:', lastAutoSave.toLocaleTimeString());
+            
+            // Afficher discrètement un indicateur visuel
+            showAutoSaveIndicator();
+        }
+    } catch (error) {
+        console.error('❌ Erreur auto-sauvegarde:', error);
+    } finally {
+        isAutoSaving = false;
+    }
+}
+
+/**
+ * Affiche un indicateur discret de sauvegarde automatique
+ */
+function showAutoSaveIndicator() {
+    const badge = document.getElementById('pvStatusBadge');
+    if (badge) {
+        const originalHTML = badge.innerHTML;
+        badge.innerHTML = '<i class="fas fa-check-circle me-1"></i>Sauvegardé';
+        badge.classList.add('bg-success');
+        badge.classList.remove('bg-warning', 'bg-info', 'bg-secondary');
+        
+        // Réinitialiser le flag de changements non sauvegardés
+        hasUnsavedChanges = false;
+        
+        setTimeout(() => {
+            updatePVStatusBadge();
+        }, 2000);
+    }
+}
+
+/**
+ * Démarre la sauvegarde périodique automatique
+ */
+function startPeriodicAutoSave() {
+    setInterval(async () => {
+        // Sauvegarder uniquement s'il y a des changements non sauvegardés
+        if (hasUnsavedChanges) {
+            await performAutoSave();
+        }
+    }, PERIODIC_SAVE_INTERVAL);
 }
 
 /**
@@ -288,6 +478,9 @@ function initializeFormPersistence() {
  */
 function saveFormData() {
     const formData = gatherFormData();
+    
+    // Marquer qu'il y a des changements non sauvegardés
+    hasUnsavedChanges = true;
     
     // Ajouter les signatures
     if (signaturePadReception && !signaturePadReception.isEmpty()) {
@@ -599,6 +792,9 @@ function handlePhotoUpload(input) {
                 
                 // Insérer avant l'input file
                 container.insertBefore(photoItem, input);
+                
+                // Auto-sauvegarde après ajout de photo
+                scheduleAutoSave();
             };
             
             img.onerror = function() {
@@ -626,6 +822,8 @@ function removePhotoItem(button) {
     const photoItem = button.closest('.photo-item');
     if (photoItem) {
         photoItem.remove();
+        // Auto-sauvegarde après suppression de photo
+        scheduleAutoSave();
     }
 }
 
@@ -672,18 +870,6 @@ function removePhoto(previewId, button) {
  * Initialise la gestion des PV sauvegardés
  */
 function initializePVManagement() {
-    // Bouton Sauvegarder (bas de page)
-    const saveDraftBtn = document.getElementById('saveDraftBtn');
-    if (saveDraftBtn) {
-        saveDraftBtn.addEventListener('click', savePVDraft);
-    }
-    
-    // Bouton Sauvegarder (haut de page)
-    const saveDraftBtnTop = document.getElementById('saveDraftBtnTop');
-    if (saveDraftBtnTop) {
-        saveDraftBtnTop.addEventListener('click', savePVDraft);
-    }
-    
     // Bouton Télécharger PDF (bas de page)
     const downloadPVBtn = document.getElementById('downloadPVBtn');
     if (downloadPVBtn) {
@@ -784,6 +970,9 @@ function initializePVManagement() {
     }
 }
 
+// Stocker tous les PV pour le filtrage dynamique
+let allPVData = [];
+
 /**
  * Charge la liste des PV sauvegardés et les affiche sous forme de cartes
  */
@@ -793,6 +982,9 @@ async function loadSavedPVList() {
         const data = await response.json();
         
         if (data.success) {
+            // Stocker les données pour le filtrage dynamique
+            allPVData = data.pv_list;
+            
             const select = document.getElementById('savedPVSelect');
             const container = document.getElementById('pvListContainer');
             const countBadge = document.getElementById('pvCountBadge');
@@ -826,6 +1018,9 @@ async function loadSavedPVList() {
             // Créer les cartes PV
             container.innerHTML = '';
             data.pv_list.forEach(pv => {
+                // Debug: afficher les données du PV
+                console.log('PV data:', pv);
+                
                 const date = new Date(pv.updated_at);
                 const dateStr = date.toLocaleDateString('fr-FR', {
                     day: '2-digit',
@@ -842,15 +1037,145 @@ async function loadSavedPVList() {
                 const statusText = pv.status === 'sent' ? 'Envoyé' : 'Brouillon';
                 const statusIcon = pv.status === 'sent' ? 'check-circle' : 'edit';
                 
+                // Déterminer l'état de complétion
+                const completionStatus = pv.completion_status || 'empty';
+                let completionBadge = '';
+                
+                if (completionStatus === 'complete') {
+                    completionBadge = '<span class="completion-badge complete"><i class="fas fa-check-double"></i> Complet</span>';
+                } else if (completionStatus === 'reception_only') {
+                    completionBadge = '<span class="completion-badge reception"><i class="fas fa-sign-in-alt"></i> Réception</span>';
+                } else if (completionStatus === 'retour_only') {
+                    completionBadge = '<span class="completion-badge retour"><i class="fas fa-sign-out-alt"></i> Retour</span>';
+                } else {
+                    completionBadge = '<span class="completion-badge empty"><i class="fas fa-times-circle"></i> Non signé</span>';
+                }
+                
                 // Créer la carte
                 const card = document.createElement('div');
                 card.className = 'pv-card';
                 card.dataset.pvId = pv.id;
                 
+                // Ajouter les données pour la recherche
+                card.dataset.chantier = (pv.chantier || '').toLowerCase();
+                card.dataset.emailConducteur = (pv.email_conducteur || '').toLowerCase();
+                card.dataset.responsable = (pv.responsable || '').toLowerCase();
+                card.dataset.fournisseur = (pv.fournisseur || '').toLowerCase();
+                card.dataset.materielNumero = (pv.materiel_numero || '').toLowerCase();
+                card.dataset.materielType = (pv.materiel_type || '').toLowerCase();
+                card.dataset.completionStatus = completionStatus;
+                card.dataset.dateReception = pv.date_reception || '';
+                card.dataset.dateRetour = pv.date_retour || '';
+                
+                // Créer un texte de recherche complet avec tous les formats de dates possibles
+                let searchText = [
+                    pv.chantier || '',
+                    pv.email_conducteur || '',
+                    pv.responsable || '',
+                    pv.fournisseur || '',
+                    pv.materiel_numero || '',
+                    pv.materiel_type || ''
+                ].join(' ').toLowerCase();
+                
+                // Ajouter les dates dans différents formats pour la recherche
+                if (pv.date_reception) {
+                    // Format original (YYYY-MM-DD)
+                    searchText += ' ' + pv.date_reception;
+                    // Format avec / (YYYY/MM/DD)
+                    searchText += ' ' + pv.date_reception.replace(/-/g, '/');
+                    // Format DD-MM-YYYY
+                    const drParts = pv.date_reception.split('-');
+                    if (drParts.length === 3) {
+                        searchText += ' ' + drParts[2] + '-' + drParts[1] + '-' + drParts[0];
+                        searchText += ' ' + drParts[2] + '/' + drParts[1] + '/' + drParts[0];
+                    }
+                }
+                
+                if (pv.date_retour) {
+                    // Format original (YYYY-MM-DD)
+                    searchText += ' ' + pv.date_retour;
+                    // Format avec / (YYYY/MM/DD)
+                    searchText += ' ' + pv.date_retour.replace(/-/g, '/');
+                    // Format DD-MM-YYYY
+                    const drParts = pv.date_retour.split('-');
+                    if (drParts.length === 3) {
+                        searchText += ' ' + drParts[2] + '-' + drParts[1] + '-' + drParts[0];
+                        searchText += ' ' + drParts[2] + '/' + drParts[1] + '/' + drParts[0];
+                    }
+                }
+                
+                card.dataset.searchText = searchText;
+                
                 // Marquer comme sélectionné si c'est le PV actuel
                 if (currentPVId === pv.id) {
                     card.classList.add('selected');
                 }
+                
+                // Construire les informations détaillées
+                let detailsHTML = '';
+                
+                // Email conducteur (toujours affiché si présent)
+                if (pv.email_conducteur) {
+                    detailsHTML += `
+                        <div class="pv-card-detail">
+                            <i class="fas fa-envelope"></i>
+                            <span>${pv.email_conducteur}</span>
+                        </div>
+                    `;
+                }
+                
+                // Responsable chantier
+                if (pv.responsable) {
+                    detailsHTML += `
+                        <div class="pv-card-detail">
+                            <i class="fas fa-user-tie"></i>
+                            <span>Resp.: ${pv.responsable}</span>
+                        </div>
+                    `;
+                }
+                
+                // Matériel
+                if (pv.materiel_numero || pv.materiel_type) {
+                    const materielInfo = [pv.materiel_type, pv.materiel_numero].filter(Boolean).join(' - ');
+                    detailsHTML += `
+                        <div class="pv-card-detail">
+                            <i class="fas fa-tools"></i>
+                            <span>Mat.: ${materielInfo}</span>
+                        </div>
+                    `;
+                }
+                
+                // Fournisseur
+                if (pv.fournisseur) {
+                    detailsHTML += `
+                        <div class="pv-card-detail">
+                            <i class="fas fa-truck"></i>
+                            <span>Fourn.: ${pv.fournisseur}</span>
+                        </div>
+                    `;
+                }
+                
+                // Date de réception
+                if (pv.date_reception) {
+                    detailsHTML += `
+                        <div class="pv-card-detail">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>Réception: ${pv.date_reception}</span>
+                        </div>
+                    `;
+                }
+                
+                // Date de retour
+                if (pv.date_retour) {
+                    detailsHTML += `
+                        <div class="pv-card-detail">
+                            <i class="fas fa-calendar-minus"></i>
+                            <span>Retour: ${pv.date_retour}</span>
+                        </div>
+                    `;
+                }
+                
+                console.log('Details HTML:', detailsHTML);
                 
                 card.innerHTML = `
                     <div class="pv-card-header">
@@ -858,9 +1183,12 @@ async function loadSavedPVList() {
                             <i class="fas fa-file-alt me-2 text-primary"></i>
                             ${pv.chantier || 'Sans nom'}
                         </h6>
-                        <span class="pv-card-status ${statusClass}">
-                            <i class="fas fa-${statusIcon}"></i> ${statusText}
-                        </span>
+                        <div class="pv-card-badges">
+                            ${completionBadge}
+                            <span class="pv-card-status ${statusClass}">
+                                <i class="fas fa-${statusIcon}"></i> ${statusText}
+                            </span>
+                        </div>
                     </div>
                     <div class="pv-card-meta">
                         <span>
@@ -872,11 +1200,15 @@ async function loadSavedPVList() {
                             ${timeStr}
                         </span>
                     </div>
+                    ${detailsHTML ? `<div class="pv-card-details">${detailsHTML}</div>` : ''}
                     <div class="pv-card-actions">
-                        <button type="button" class="btn btn-sm btn-primary load-pv-btn" data-pv-id="${pv.id}">
-                            <i class="fas fa-folder-open"></i> Charger
+                        <button type="button" class="btn btn-sm pv-btn-download download-pv-btn" data-pv-id="${pv.id}">
+                            <i class="fas fa-download"></i> Télécharger
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger delete-pv-btn" data-pv-id="${pv.id}">
+                        <button type="button" class="btn btn-sm pv-btn-send send-pv-btn" data-pv-id="${pv.id}">
+                            <i class="fas fa-paper-plane"></i> Envoyer
+                        </button>
+                        <button type="button" class="btn btn-sm pv-btn-delete delete-pv-btn" data-pv-id="${pv.id}">
                             <i class="fas fa-trash"></i> Supprimer
                         </button>
                     </div>
@@ -896,6 +1228,9 @@ async function loadSavedPVList() {
             
             // Initialiser la recherche et le filtrage
             initializePVSearch();
+            
+            // Peupler les dropdowns de filtre
+            populateFilterDropdowns(data.pv_list);
             
             // Mettre à jour le compteur filtré
             updateFilterCount();
@@ -945,15 +1280,6 @@ function checkScrollableList() {
  * Attache les événements aux cartes PV
  */
 function attachPVCardEvents() {
-    // Événement de clic sur les boutons "Charger"
-    document.querySelectorAll('.load-pv-btn').forEach(btn => {
-        btn.addEventListener('click', async function(e) {
-            e.stopPropagation();
-            const pvId = this.dataset.pvId;
-            await loadPVById(pvId);
-        });
-    });
-    
     // Événement de clic sur les boutons "Supprimer"
     document.querySelectorAll('.delete-pv-btn').forEach(btn => {
         btn.addEventListener('click', async function(e) {
@@ -963,24 +1289,39 @@ function attachPVCardEvents() {
         });
     });
     
-    // Événement de clic sur les cartes (sélection visuelle)
+    // Événement de clic sur les boutons "Télécharger"
+    document.querySelectorAll('.download-pv-btn').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            const pvId = this.dataset.pvId;
+            await downloadPVById(pvId);
+        });
+    });
+    
+    // Événement de clic sur les boutons "Envoyer"
+    document.querySelectorAll('.send-pv-btn').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            const pvId = this.dataset.pvId;
+            await sendPVById(pvId);
+        });
+    });
+    
+    // Événement de clic sur les cartes (charge le PV directement)
     document.querySelectorAll('.pv-card').forEach(card => {
-        card.addEventListener('click', function(e) {
+        card.addEventListener('click', async function(e) {
             // Ne pas traiter si on a cliqué sur un bouton
             if (e.target.closest('.pv-card-actions')) return;
             
-            // Retirer la sélection de toutes les cartes
-            document.querySelectorAll('.pv-card').forEach(c => c.classList.remove('selected'));
-            
-            // Sélectionner cette carte
-            this.classList.add('selected');
-            
-            // Mettre à jour le select (pour compatibilité)
-            const select = document.getElementById('savedPVSelect');
-            if (select) {
-                select.value = this.dataset.pvId;
+            // Charger le PV directement
+            const pvId = this.dataset.pvId;
+            if (pvId) {
+                await loadPVById(pvId);
             }
         });
+        
+        // Ajouter un style cursor pointer pour indiquer que c'est cliquable
+        card.style.cursor = 'pointer';
     });
 }
 
@@ -990,6 +1331,17 @@ function attachPVCardEvents() {
 function initializePVSearch() {
     const searchInput = document.getElementById('pvSearchInput');
     const filterStatus = document.getElementById('pvFilterStatus');
+    const filterCompletion = document.getElementById('pvFilterCompletion');
+    const filterChantier = document.getElementById('pvFilterChantier');
+    const filterMaterielType = document.getElementById('pvFilterMaterielType');
+    const filterResponsable = document.getElementById('pvFilterResponsable');
+    const filterFournisseur = document.getElementById('pvFilterFournisseur');
+    const filterEmailConducteur = document.getElementById('pvFilterEmailConducteur');
+    const filterDateReception = document.getElementById('pvFilterDateReception');
+    const filterDateRetour = document.getElementById('pvFilterDateRetour');
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    const toggleFiltersBtn = document.getElementById('toggleFiltersBtn');
+    const filtersSection = document.getElementById('pvFiltersSection');
     const toggleBtn = document.getElementById('togglePVListBtn');
     const searchSection = document.getElementById('pvSearchSection');
     const listContainer = document.getElementById('pvListContainer');
@@ -999,19 +1351,121 @@ function initializePVSearch() {
     }
     
     if (filterStatus) {
-        filterStatus.addEventListener('change', filterPVCards);
+        filterStatus.addEventListener('change', function() {
+            filterPVCards();
+            populateFilterDropdowns();
+        });
+    }
+    
+    if (filterCompletion) {
+        filterCompletion.addEventListener('change', function() {
+            filterPVCards();
+            populateFilterDropdowns();
+        });
+    }
+    
+    if (filterChantier) {
+        filterChantier.addEventListener('change', function() {
+            filterPVCards();
+            populateFilterDropdowns();
+        });
+    }
+    
+    if (filterMaterielType) {
+        filterMaterielType.addEventListener('change', function() {
+            filterPVCards();
+            populateFilterDropdowns();
+        });
+    }
+    
+    if (filterResponsable) {
+        filterResponsable.addEventListener('change', function() {
+            filterPVCards();
+            populateFilterDropdowns();
+        });
+    }
+    
+    if (filterFournisseur) {
+        filterFournisseur.addEventListener('change', function() {
+            filterPVCards();
+            populateFilterDropdowns();
+        });
+    }
+    
+    if (filterEmailConducteur) {
+        filterEmailConducteur.addEventListener('change', function() {
+            filterPVCards();
+            populateFilterDropdowns();
+        });
+    }
+    
+    if (filterDateReception) {
+        filterDateReception.addEventListener('change', function() {
+            filterPVCards();
+            populateFilterDropdowns();
+        });
+    }
+    
+    if (filterDateRetour) {
+        filterDateRetour.addEventListener('change', function() {
+            filterPVCards();
+            populateFilterDropdowns();
+        });
+    }
+    
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', function() {
+            // Réinitialiser tous les filtres
+            if (searchInput) searchInput.value = '';
+            if (filterStatus) filterStatus.value = '';
+            if (filterCompletion) filterCompletion.value = '';
+            if (filterChantier) filterChantier.value = '';
+            if (filterMaterielType) filterMaterielType.value = '';
+            if (filterResponsable) filterResponsable.value = '';
+            if (filterFournisseur) filterFournisseur.value = '';
+            if (filterEmailConducteur) filterEmailConducteur.value = '';
+            if (filterDateReception) filterDateReception.value = '';
+            if (filterDateRetour) filterDateRetour.value = '';
+            
+            // Relancer le filtrage
+            filterPVCards();
+        });
+    }
+    
+    if (toggleFiltersBtn && filtersSection) {
+        toggleFiltersBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const isHidden = filtersSection.style.display === 'none';
+            
+            if (isHidden) {
+                // Afficher les filtres
+                filtersSection.style.display = 'block';
+                this.innerHTML = '<i class="fas fa-times me-2"></i>Masquer';
+            } else {
+                // Masquer les filtres
+                filtersSection.style.display = 'none';
+                this.innerHTML = '<i class="fas fa-filter me-2"></i>Filtrer';
+            }
+        });
     }
     
     if (toggleBtn && searchSection && listContainer) {
-        toggleBtn.addEventListener('click', function() {
-            const isCollapsed = searchSection.classList.contains('collapsed');
+        toggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const isCollapsed = listContainer.style.display === 'none';
             
             if (isCollapsed) {
-                searchSection.classList.remove('collapsed');
+                // Afficher
+                searchSection.style.display = 'block';
                 listContainer.style.display = 'block';
                 this.innerHTML = '<i class="fas fa-chevron-up"></i>';
             } else {
-                searchSection.classList.add('collapsed');
+                // Masquer
+                searchSection.style.display = 'none';
                 listContainer.style.display = 'none';
                 this.innerHTML = '<i class="fas fa-chevron-down"></i>';
             }
@@ -1025,29 +1479,71 @@ function initializePVSearch() {
 function filterPVCards() {
     const searchInput = document.getElementById('pvSearchInput');
     const filterStatus = document.getElementById('pvFilterStatus');
+    const filterCompletion = document.getElementById('pvFilterCompletion');
+    const filterChantier = document.getElementById('pvFilterChantier');
+    const filterMaterielType = document.getElementById('pvFilterMaterielType');
+    const filterResponsable = document.getElementById('pvFilterResponsable');
+    const filterFournisseur = document.getElementById('pvFilterFournisseur');
+    const filterEmailConducteur = document.getElementById('pvFilterEmailConducteur');
+    const filterDateReception = document.getElementById('pvFilterDateReception');
+    const filterDateRetour = document.getElementById('pvFilterDateRetour');
     const cards = document.querySelectorAll('.pv-card');
     
     if (!searchInput || !filterStatus) return;
     
     const searchTerm = searchInput.value.toLowerCase();
     const statusFilter = filterStatus.value;
+    const completionFilter = filterCompletion ? filterCompletion.value : '';
+    const chantierFilter = filterChantier ? filterChantier.value.toLowerCase() : '';
+    const materielTypeFilter = filterMaterielType ? filterMaterielType.value.toLowerCase() : '';
+    const responsableFilter = filterResponsable ? filterResponsable.value.toLowerCase() : '';
+    const fournisseurFilter = filterFournisseur ? filterFournisseur.value.toLowerCase() : '';
+    const emailConducteurFilter = filterEmailConducteur ? filterEmailConducteur.value.toLowerCase() : '';
+    const dateReceptionFilter = filterDateReception ? filterDateReception.value : '';
+    const dateRetourFilter = filterDateRetour ? filterDateRetour.value : '';
     
     let visibleCount = 0;
     
     cards.forEach(card => {
-        const title = card.querySelector('.pv-card-title').textContent.toLowerCase();
-        const meta = card.querySelector('.pv-card-meta').textContent.toLowerCase();
         const statusBadge = card.querySelector('.pv-card-status');
         const cardStatus = statusBadge.classList.contains('sent') ? 'sent' : 'draft';
         
+        // Récupérer le texte de recherche complet qui contient tous les formats
+        const searchableText = card.dataset.searchText || '';
+        
         // Vérifier la recherche textuelle
-        const matchesSearch = !searchTerm || title.includes(searchTerm) || meta.includes(searchTerm);
+        const matchesSearch = !searchTerm || searchableText.includes(searchTerm);
         
         // Vérifier le filtre de statut
         const matchesStatus = !statusFilter || cardStatus === statusFilter;
         
+        // Vérifier le filtre de complétion
+        const matchesCompletion = !completionFilter || (card.dataset.completionStatus || 'empty') === completionFilter;
+        
+        // Vérifier le filtre chantier
+        const matchesChantier = !chantierFilter || (card.dataset.chantier || '').toLowerCase() === chantierFilter;
+        
+        // Vérifier le filtre type matériel
+        const matchesMaterielType = !materielTypeFilter || (card.dataset.materielType || '').toLowerCase() === materielTypeFilter;
+        
+        // Vérifier le filtre responsable
+        const matchesResponsable = !responsableFilter || (card.dataset.responsable || '').toLowerCase() === responsableFilter;
+        
+        // Vérifier le filtre fournisseur
+        const matchesFournisseur = !fournisseurFilter || (card.dataset.fournisseur || '').toLowerCase() === fournisseurFilter;
+        
+        // Vérifier le filtre email conducteur
+        const matchesEmailConducteur = !emailConducteurFilter || (card.dataset.emailConducteur || '').toLowerCase() === emailConducteurFilter;
+        
+        // Vérifier le filtre date réception
+        const matchesDateReception = !dateReceptionFilter || (card.dataset.dateReception || '') === dateReceptionFilter;
+        
+        // Vérifier le filtre date retour
+        const matchesDateRetour = !dateRetourFilter || (card.dataset.dateRetour || '') === dateRetourFilter;
+        
         // Afficher ou masquer la carte
-        if (matchesSearch && matchesStatus) {
+        if (matchesSearch && matchesStatus && matchesCompletion && matchesChantier && matchesMaterielType && 
+            matchesResponsable && matchesFournisseur && matchesEmailConducteur && matchesDateReception && matchesDateRetour) {
             card.classList.remove('hidden');
             visibleCount++;
         } else {
@@ -1057,6 +1553,169 @@ function filterPVCards() {
     
     updateFilterCount(visibleCount);
     checkScrollableList();
+}
+
+/**
+ * Peuple les dropdowns de filtre avec les valeurs uniques
+ */
+function populateFilterDropdowns(pvs) {
+    // Sauvegarder les valeurs actuellement sélectionnées
+    const currentFilters = {
+        status: document.getElementById('pvFilterStatus')?.value || '',
+        completion: document.getElementById('pvFilterCompletion')?.value || '',
+        chantier: document.getElementById('pvFilterChantier')?.value || '',
+        materielType: document.getElementById('pvFilterMaterielType')?.value || '',
+        responsable: document.getElementById('pvFilterResponsable')?.value || '',
+        fournisseur: document.getElementById('pvFilterFournisseur')?.value || '',
+        emailConducteur: document.getElementById('pvFilterEmailConducteur')?.value || '',
+        dateReception: document.getElementById('pvFilterDateReception')?.value || '',
+        dateRetour: document.getElementById('pvFilterDateRetour')?.value || ''
+    };
+    
+    // Filtrer les PV selon les filtres actifs
+    let filteredPVs = allPVData.filter(pv => {
+        const matchesStatus = !currentFilters.status || 
+            (currentFilters.status === 'sent' && pv.status === 'sent') ||
+            (currentFilters.status === 'draft' && pv.status !== 'sent');
+        const matchesCompletion = !currentFilters.completion || 
+            (pv.completion_status || 'empty') === currentFilters.completion;
+        const matchesChantier = !currentFilters.chantier || 
+            (pv.chantier || '').trim() === currentFilters.chantier;
+        const matchesMaterielType = !currentFilters.materielType || 
+            (pv.materiel_type || '').trim() === currentFilters.materielType;
+        const matchesResponsable = !currentFilters.responsable || 
+            (pv.responsable || '').trim() === currentFilters.responsable;
+        const matchesFournisseur = !currentFilters.fournisseur || 
+            (pv.fournisseur || '').trim() === currentFilters.fournisseur;
+        const matchesEmailConducteur = !currentFilters.emailConducteur || 
+            (pv.email_conducteur || '').trim() === currentFilters.emailConducteur;
+        const matchesDateReception = !currentFilters.dateReception || 
+            (pv.date_reception || '') === currentFilters.dateReception;
+        const matchesDateRetour = !currentFilters.dateRetour || 
+            (pv.date_retour || '') === currentFilters.dateRetour;
+        
+        return matchesStatus && matchesCompletion && matchesChantier && matchesMaterielType &&
+            matchesResponsable && matchesFournisseur && matchesEmailConducteur &&
+            matchesDateReception && matchesDateRetour;
+    });
+    
+    const chantierSet = new Set();
+    const materielTypeSet = new Set();
+    const responsableSet = new Set();
+    const fournisseurSet = new Set();
+    const emailConducteurSet = new Set();
+    
+    console.log('🔍 Population des filtres avec', filteredPVs.length, 'PV (sur', allPVData.length, 'total)');
+    
+    filteredPVs.forEach(pv => {
+        if (pv.chantier && pv.chantier.trim()) {
+            chantierSet.add(pv.chantier.trim());
+        }
+        if (pv.materiel_type && pv.materiel_type.trim()) {
+            materielTypeSet.add(pv.materiel_type.trim());
+        }
+        if (pv.responsable && pv.responsable.trim()) {
+            responsableSet.add(pv.responsable.trim());
+        }
+        if (pv.fournisseur && pv.fournisseur.trim()) {
+            fournisseurSet.add(pv.fournisseur.trim());
+        }
+        if (pv.email_conducteur && pv.email_conducteur.trim()) {
+            emailConducteurSet.add(pv.email_conducteur.trim());
+        }
+    });
+    
+    console.log('🏗️ Chantiers trouvés:', Array.from(chantierSet));
+    console.log('🔧 Types matériel trouvés:', Array.from(materielTypeSet));
+    console.log('👤 Responsables trouvés:', Array.from(responsableSet));
+    console.log('🚚 Fournisseurs trouvés:', Array.from(fournisseurSet));
+    console.log('✉️ Emails conducteur trouvés:', Array.from(emailConducteurSet));
+    
+    // Peupler le dropdown chantier
+    const chantierSelect = document.getElementById('pvFilterChantier');
+    if (chantierSelect) {
+        const currentValue = chantierSelect.value;
+        chantierSelect.innerHTML = '<option value="">Tous chantiers</option>';
+        Array.from(chantierSet).sort().forEach(chantier => {
+            const option = document.createElement('option');
+            option.value = chantier;
+            option.textContent = chantier;
+            chantierSelect.appendChild(option);
+        });
+        // Restaurer la valeur si elle existe toujours
+        if (currentValue && chantierSet.has(currentValue)) {
+            chantierSelect.value = currentValue;
+        }
+        console.log('✅ Dropdown chantier peuplé avec', chantierSet.size, 'valeurs');
+    }
+    
+    // Peupler le dropdown type matériel
+    const materielTypeSelect = document.getElementById('pvFilterMaterielType');
+    if (materielTypeSelect) {
+        const currentValue = materielTypeSelect.value;
+        materielTypeSelect.innerHTML = '<option value="">Tous types</option>';
+        Array.from(materielTypeSet).sort().forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            materielTypeSelect.appendChild(option);
+        });
+        if (currentValue && materielTypeSet.has(currentValue)) {
+            materielTypeSelect.value = currentValue;
+        }
+        console.log('✅ Dropdown type matériel peuplé avec', materielTypeSet.size, 'valeurs');
+    }
+    
+    // Peupler le dropdown responsable
+    const responsableSelect = document.getElementById('pvFilterResponsable');
+    if (responsableSelect) {
+        const currentValue = responsableSelect.value;
+        responsableSelect.innerHTML = '<option value="">Tous responsables</option>';
+        Array.from(responsableSet).sort().forEach(resp => {
+            const option = document.createElement('option');
+            option.value = resp;
+            option.textContent = resp;
+            responsableSelect.appendChild(option);
+        });
+        if (currentValue && responsableSet.has(currentValue)) {
+            responsableSelect.value = currentValue;
+        }
+        console.log('✅ Dropdown responsable peuplé avec', responsableSet.size, 'valeurs');
+    }
+    
+    // Peupler le dropdown fournisseur
+    const fournisseurSelect = document.getElementById('pvFilterFournisseur');
+    if (fournisseurSelect) {
+        const currentValue = fournisseurSelect.value;
+        fournisseurSelect.innerHTML = '<option value="">Tous fournisseurs</option>';
+        Array.from(fournisseurSet).sort().forEach(fourn => {
+            const option = document.createElement('option');
+            option.value = fourn;
+            option.textContent = fourn;
+            fournisseurSelect.appendChild(option);
+        });
+        if (currentValue && fournisseurSet.has(currentValue)) {
+            fournisseurSelect.value = currentValue;
+        }
+        console.log('✅ Dropdown fournisseur peuplé avec', fournisseurSet.size, 'valeurs');
+    }
+    
+    // Peupler le dropdown email conducteur
+    const emailConducteurSelect = document.getElementById('pvFilterEmailConducteur');
+    if (emailConducteurSelect) {
+        const currentValue = emailConducteurSelect.value;
+        emailConducteurSelect.innerHTML = '<option value="">Tous emails conducteur</option>';
+        Array.from(emailConducteurSet).sort().forEach(email => {
+            const option = document.createElement('option');
+            option.value = email;
+            option.textContent = email;
+            emailConducteurSelect.appendChild(option);
+        });
+        if (currentValue && emailConducteurSet.has(currentValue)) {
+            emailConducteurSelect.value = currentValue;
+        }
+        console.log('✅ Dropdown email conducteur peuplé avec', emailConducteurSet.size, 'valeurs');
+    }
 }
 
 /**
@@ -1184,6 +1843,105 @@ async function deletePVById(pvId) {
 }
 
 /**
+ * Télécharge un PV par son ID
+ */
+async function downloadPVById(pvId) {
+    if (!pvId) return;
+    
+    try {
+        // Charger le PV d'abord
+        await loadPVById(pvId);
+        
+        // Attendre un peu pour s'assurer que le formulaire est bien rempli
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Télécharger le PDF
+        await downloadPVAsPDF();
+    } catch (error) {
+        console.error('Erreur lors du téléchargement du PV:', error);
+        showNotification('danger', 'Erreur lors du téléchargement du PV');
+    }
+}
+
+/**
+ * Envoie un PV par email par son ID
+ */
+async function sendPVById(pvId) {
+    if (!pvId) return;
+    
+    try {
+        // Charger le PV d'abord
+        await loadPVById(pvId);
+        
+        // Attendre un peu pour s'assurer que le formulaire est bien rempli
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Soumettre le formulaire pour envoyer l'email
+        const pvForm = document.getElementById('pvForm');
+        if (pvForm) {
+            // Créer un FormData avec les données actuelles
+            const formData = new FormData(pvForm);
+            
+            // Ajouter les signatures si elles existent
+            if (signaturePadReception && !signaturePadReception.isEmpty()) {
+                const signatureBlob = await fetch(signaturePadReception.toDataURL('image/png')).then(r => r.blob());
+                formData.set('signature_reception', signatureBlob, 'signature_reception.png');
+            }
+            
+            if (signaturePadRetour && !signaturePadRetour.isEmpty()) {
+                const signatureBlob = await fetch(signaturePadRetour.toDataURL('image/png')).then(r => r.blob());
+                formData.set('signature_retour', signatureBlob, 'signature_retour.png');
+            }
+            
+            // Validation
+            const chantier = formData.get('chantier');
+            const emailConducteur = formData.get('email_conducteur');
+            const hasReceptionSignature = signaturePadReception && !signaturePadReception.isEmpty();
+            const hasRetourSignature = signaturePadRetour && !signaturePadRetour.isEmpty();
+            
+            if (!chantier || !emailConducteur) {
+                showNotification('warning', 'Veuillez remplir le chantier et l\'email conducteur avant d\'envoyer');
+                return;
+            }
+            
+            if (!hasReceptionSignature && !hasRetourSignature) {
+                showNotification('warning', 'Veuillez signer au moins une section (Réception ou Retour) avant d\'envoyer');
+                return;
+            }
+            
+            // Envoyer
+            const response = await fetch(pvForm.action, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else if (response.ok) {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    showNotification('success', data.message || 'PV envoyé par email avec succès');
+                } else {
+                    window.location.reload();
+                }
+                await loadSavedPVList();
+            } else {
+                try {
+                    const data = await response.json();
+                    showNotification('danger', data.message || 'Erreur lors de l\'envoi du PV');
+                } catch {
+                    showNotification('danger', 'Erreur lors de l\'envoi du PV');
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Erreur lors de l\'envoi du PV:', error);
+        showNotification('danger', 'Erreur lors de l\'envoi du PV');
+    }
+}
+
+/**
  * Sauvegarde le PV en cours comme brouillon
  * @param {Event|boolean} eventOrSilent - L'événement click ou un booléen silent
  * @returns {Promise<boolean>} - true si succès, false sinon
@@ -1202,6 +1960,10 @@ async function savePVDraft(eventOrSilent) {
         
         // Récupérer toutes les données du formulaire
         const formData = gatherFormData();
+        console.log('FormData being saved:', formData);
+        console.log('Email conducteur:', formData.email_conducteur);
+        console.log('Responsable:', formData.responsable);
+        console.log('Fournisseur:', formData.fournisseur);
         
         // Ajouter l'ID actuel si existant
         if (currentPVId) {
@@ -1379,16 +2141,11 @@ async function downloadPVAsPDF(event) {
         console.error('Erreur lors du téléchargement:', error);
         showNotification('danger', 'Erreur lors du téléchargement du PDF');
         
-        // Restaurer les boutons
+        // Restaurer le bouton
         const btnBottom = document.getElementById('downloadPVBtn');
-        const btnTop = document.getElementById('downloadPVBtnTop');
         if (btnBottom) {
             btnBottom.disabled = false;
             btnBottom.innerHTML = '<i class="fas fa-download"></i> Télécharger le PDF<br><small class="d-block mt-1">Générer et télécharger le PDF</small>';
-        }
-        if (btnTop) {
-            btnTop.disabled = false;
-            btnTop.innerHTML = '<i class="fas fa-download"></i> Télécharger le PDF';
         }
     }
 }
@@ -1469,6 +2226,22 @@ function populateForm(formData) {
         
         // Ignorer les champs photo_ qui seront traités dans la section photos
         if (key.startsWith('photo_')) {
+            return;
+        }
+        
+        // Vérifier si c'est un champ Select2
+        if (HISTORY_FIELDS.includes(key)) {
+            // Utiliser jQuery pour définir la valeur dans Select2
+            const $element = $(`#${key}`);
+            if ($element.length) {
+                // Créer l'option si elle n'existe pas déjà
+                if ($element.find(`option[value="${value}"]`).length === 0 && value) {
+                    const newOption = new Option(value, value, true, true);
+                    $element.append(newOption);
+                }
+                // Définir la valeur et déclencher le changement
+                $element.val(value).trigger('change');
+            }
             return;
         }
         
@@ -1634,6 +2407,12 @@ function createNewPV() {
     currentPVId = null;
     pvStatus = 'new';
     document.getElementById('pvId').value = '';
+    
+    // Restaurer l'email entreprise depuis l'historique avec Select2
+    const history = getFieldHistory('email_entreprise');
+    if (history.length > 0) {
+        $('#email_entreprise').val(history[0]).trigger('change');
+    }
     
     // Réinitialiser le select
     const select = document.getElementById('savedPVSelect');
@@ -1928,6 +2707,431 @@ async function testSmtpConfig() {
         testBtn.disabled = false;
         testBtn.innerHTML = '<i class="fas fa-flask"></i> Tester la connexion';
     }
+}
+
+/**
+ * ========================================
+ * GESTION DES CHAMPS SELECT2
+ * ========================================
+ */
+
+/**
+ * Initialise les champs Select2 avec les données de l'historique
+ */
+function initializeSelect2Fields() {
+    // Configuration des données factices pour chaque champ
+    const fieldData = {
+        'chantier': [],
+        'email_conducteur': [],
+        'email_entreprise': [],
+        'materiel_numero': [],
+        'materiel_type': [],
+        'fournisseur': [],
+        'responsable': []
+    };
+    
+    // Initialiser chaque champ Select2
+    HISTORY_FIELDS.forEach(fieldId => {
+        const $field = $(`#${fieldId}`);
+        if ($field.length === 0) return;
+        
+        // Charger les données de l'historique localStorage
+        const historyData = getFieldHistory(fieldId);
+        
+        // Combiner les données factices avec l'historique (sans doublons)
+        const dummyData = fieldData[fieldId] || [];
+        const allData = [...new Set([...historyData, ...dummyData])];
+        
+        // Ajouter les options au select
+        allData.forEach(value => {
+            if (value && value.trim()) {
+                $field.append(new Option(value, value, false, false));
+            }
+        });
+        
+        // Initialiser le champ
+        initSingleSelect2Field($field, fieldId, fieldData);
+        
+        // Charger la valeur par défaut pour email_entreprise
+        if (fieldId === 'email_entreprise' && historyData.length > 0) {
+            $field.val(historyData[0]).trigger('change');
+        }
+    });
+}
+
+/**
+ * Initialise un seul champ Select2
+ */
+function initSingleSelect2Field($field, fieldId, fieldData) {
+    // Initialiser Select2 avec la fonction tags et template personnalisé
+    $field.select2({
+        theme: 'bootstrap-5',
+        tags: true,
+        placeholder: `Sélectionnez ou tapez ${$field.prev('label').text().replace('*', '').trim()}`,
+        allowClear: !$field.prop('required'),
+        width: '100%',
+        createTag: function (params) {
+            const term = $.trim(params.term);
+            if (term === '') {
+                return null;
+            }
+            return {
+                id: term,
+                text: term,
+                newTag: true
+            };
+        },
+        templateResult: function(data) {
+            if (!data.id) {
+                return data.text;
+            }
+            
+            // Créer l'élément avec un bouton de suppression
+            const $result = $('<span class="select2-result-item"></span>');
+            const $text = $('<span class="select2-result-text"></span>').text(data.text);
+            const $deleteBtn = $('<button class="select2-delete-btn" type="button" title="Supprimer"><i class="fas fa-times"></i></button>');
+            
+            // Utiliser mousedown pour intercepter avant le clic de Select2
+            $deleteBtn.on('mousedown', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                
+                const valueToDelete = data.text;
+                
+                // Empêcher la fermeture du dropdown temporairement
+                let preventClose = true;
+                const preventClosing = function(e) {
+                    if (preventClose) {
+                        e.preventDefault();
+                    }
+                };
+                
+                $field.on('select2:closing', preventClosing);
+                
+                // Supprimer de l'historique
+                deleteFromFieldHistory(fieldId, valueToDelete);
+                
+                // Sauvegarder la valeur actuelle
+                const currentVal = $field.val();
+                
+                // Supprimer l'option du DOM
+                $field.find(`option`).filter(function() {
+                    return $(this).val() === valueToDelete;
+                }).remove();
+                
+                // Restaurer la valeur si elle n'a pas été supprimée
+                if (currentVal !== valueToDelete) {
+                    $field.val(currentVal);
+                }
+                
+                // Supprimer visuellement l'élément du dropdown
+                $(e.target).closest('.select2-results__option').fadeOut(150, function() {
+                    $(this).remove();
+                    
+                    // Réactiver la fermeture normale après l'animation
+                    setTimeout(() => {
+                        preventClose = false;
+                        $field.off('select2:closing', preventClosing);
+                    }, 50);
+                });
+                
+                return false;
+            });
+            
+            // Empêcher aussi le click
+            $deleteBtn.on('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                return false;
+            });
+            
+            $result.append($text);
+            $result.append($deleteBtn);
+            
+            return $result;
+        }
+    });
+    
+    // Sauvegarder dans l'historique quand la valeur change
+    $field.off('change.history').on('change.history', function() {
+        const value = $(this).val();
+        if (value && value.trim()) {
+            saveToFieldHistory(fieldId, value.trim());
+        }
+    });
+    
+    // Déclencher une auto-sauvegarde immédiate après changement Select2
+    $field.off('select2:select').on('select2:select', function() {
+        performAutoSave();
+    });
+    
+    $field.off('select2:clear').on('select2:clear', function() {
+        performAutoSave();
+    });
+}
+
+/**
+ * ========================================
+ * GESTION DE L'HISTORIQUE DES CHAMPS
+ * ========================================
+ */
+
+/**
+ * Initialise la gestion de l'email entreprise - charge le dernier email utilisé
+ */
+function initializeEmailEntreprise() {
+    const emailField = document.getElementById('email_entreprise');
+    if (!emailField) return;
+    
+    // Charger le dernier email utilisé depuis l'historique
+    const history = getFieldHistory('email_entreprise');
+    if (history.length > 0) {
+        emailField.value = history[0]; // Le plus récent
+    }
+}
+
+/**
+ * Initialise le système d'historique pour les champs avec autocomplétion
+ */
+function initializeFieldHistory() {
+    HISTORY_FIELDS.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        const dropdown = document.getElementById(`${fieldId}_dropdown`);
+        
+        if (!field || !dropdown) return;
+        
+        // Afficher le dropdown au focus
+        field.addEventListener('focus', function() {
+            showDropdown(fieldId);
+        });
+        
+        // Filtrer au fur et à mesure de la frappe
+        field.addEventListener('input', function() {
+            showDropdown(fieldId, this.value);
+        });
+        
+        // Sauvegarder quand on quitte le champ
+        field.addEventListener('blur', function(e) {
+            // Délai pour permettre le clic sur un élément du dropdown
+            setTimeout(() => {
+                // Vérifier si le dropdown est toujours visible (peut avoir été rouvert par un clic de suppression)
+                const dropdown = document.getElementById(`${fieldId}_dropdown`);
+                const isDropdownHovered = dropdown && dropdown.matches(':hover');
+                
+                // Ne pas fermer si la souris est sur le dropdown
+                if (!isDropdownHovered) {
+                    const value = this.value.trim();
+                    if (value) {
+                        saveToFieldHistory(fieldId, value);
+                    }
+                    hideDropdown(fieldId);
+                }
+            }, 200);
+        });
+    });
+    
+    // Fermer les dropdowns si on clique ailleurs
+    document.addEventListener('click', function(e) {
+        // Ne pas fermer si on clique sur un dropdown ou un bouton de suppression
+        if (!e.target.closest('.position-relative') && !e.target.closest('.autocomplete-dropdown')) {
+            HISTORY_FIELDS.forEach(fieldId => {
+                hideDropdown(fieldId);
+            });
+        }
+    });
+}
+
+/**
+ * Affiche le dropdown avec l'historique filtré
+ * @param {string} fieldId - L'ID du champ
+ * @param {string} filter - Texte de filtrage (optionnel)
+ */
+function showDropdown(fieldId, filter = '') {
+    const dropdown = document.getElementById(`${fieldId}_dropdown`);
+    if (!dropdown) return;
+    
+    let history = getFieldHistory(fieldId);
+    
+    // Filtrer si nécessaire
+    if (filter) {
+        const filterLower = filter.toLowerCase();
+        history = history.filter(item => item.toLowerCase().includes(filterLower));
+    }
+    
+    dropdown.innerHTML = '';
+    
+    if (history.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'autocomplete-empty';
+        empty.innerHTML = filter 
+            ? '<i class="fas fa-search"></i> Aucun résultat'
+            : '<i class="fas fa-info-circle"></i> Tapez pour enregistrer une nouvelle valeur';
+        dropdown.appendChild(empty);
+        dropdown.style.display = 'block';
+        return;
+    }
+    
+    history.forEach(value => {
+        const item = document.createElement('div');
+        item.className = 'autocomplete-item';
+        
+        const text = document.createElement('span');
+        text.className = 'autocomplete-item-text';
+        text.textContent = value;
+        text.addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.getElementById(fieldId).value = value;
+            hideDropdown(fieldId);
+        });
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'autocomplete-item-delete';
+        deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+        deleteBtn.title = 'Supprimer cette valeur';
+        deleteBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            deleteFromFieldHistory(fieldId, value);
+            // Récupérer le filtre actuel du champ
+            const currentFilter = document.getElementById(fieldId)?.value || '';
+            showDropdown(fieldId, currentFilter);
+        });
+        
+        item.appendChild(text);
+        item.appendChild(deleteBtn);
+        dropdown.appendChild(item);
+    });
+    
+    dropdown.style.display = 'block';
+}
+
+/**
+ * Cache le dropdown
+ * @param {string} fieldId - L'ID du champ
+ */
+function hideDropdown(fieldId) {
+    const dropdown = document.getElementById(`${fieldId}_dropdown`);
+    if (dropdown) {
+        dropdown.style.display = 'none';
+    }
+}
+
+/**
+ * Récupère l'historique d'un champ depuis le localStorage
+ * @param {string} fieldId - L'ID du champ
+ * @returns {Array} - Tableau des valeurs historiques
+ */
+function getFieldHistory(fieldId) {
+    try {
+        const history = localStorage.getItem(`field_history_${fieldId}`);
+        return history ? JSON.parse(history) : [];
+    } catch (error) {
+        console.error(`Erreur lors de la récupération de l'historique pour ${fieldId}:`, error);
+        return [];
+    }
+}
+
+/**
+ * Sauvegarde une valeur dans l'historique d'un champ
+ * @param {string} fieldId - L'ID du champ
+ * @param {string} value - La valeur à sauvegarder
+ */
+function saveToFieldHistory(fieldId, value) {
+    if (!value || value.trim() === '') return;
+    
+    try {
+        let history = getFieldHistory(fieldId);
+        
+        // Supprimer l'ancienne occurrence si elle existe
+        history = history.filter(item => item !== value);
+        
+        // Ajouter au début
+        history.unshift(value);
+        
+        // Limiter à 50 valeurs
+        if (history.length > 50) {
+            history = history.slice(0, 50);
+        }
+        
+        localStorage.setItem(`field_history_${fieldId}`, JSON.stringify(history));
+    } catch (error) {
+        console.error(`Erreur lors de la sauvegarde de l'historique pour ${fieldId}:`, error);
+    }
+}
+
+/**
+ * Supprime une valeur de l'historique d'un champ
+ * @param {string} fieldId - L'ID du champ
+ * @param {string} value - La valeur à supprimer
+ */
+function deleteFromFieldHistory(fieldId, value) {
+    try {
+        let history = getFieldHistory(fieldId);
+        history = history.filter(item => item !== value);
+        localStorage.setItem(`field_history_${fieldId}`, JSON.stringify(history));
+    } catch (error) {
+        console.error(`Erreur lors de la suppression de l'historique pour ${fieldId}:`, error);
+    }
+}
+
+/**
+ * Gère le bouton de navigation scroll (haut/bas de page)
+ */
+function initScrollNavigation() {
+    const scrollBtn = document.getElementById('scrollNavBtn');
+    const scrollIcon = document.getElementById('scrollNavIcon');
+    
+    if (!scrollBtn || !scrollIcon) return;
+    
+    let isAtBottom = false;
+    
+    // Fonction pour vérifier si on est en bas de page
+    function checkScrollPosition() {
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollBottom = scrollTop + windowHeight;
+        
+        // Considérer qu'on est en bas si on est à moins de 100px du bas
+        isAtBottom = (documentHeight - scrollBottom) < 100;
+        
+        // Afficher le bouton si on a scrollé plus de 300px
+        if (scrollTop > 300) {
+            scrollBtn.style.display = 'flex';
+            
+            // Changer l'icône selon la position
+            if (isAtBottom) {
+                scrollIcon.className = 'fas fa-chevron-up';
+            } else {
+                scrollIcon.className = 'fas fa-chevron-down';
+            }
+        } else {
+            scrollBtn.style.display = 'none';
+        }
+    }
+    
+    // Fonction pour scroller
+    function handleScroll() {
+        if (isAtBottom) {
+            // Scroller vers le haut
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        } else {
+            // Scroller vers le bas
+            window.scrollTo({
+                top: document.documentElement.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    }
+    
+    // Événements
+    window.addEventListener('scroll', checkScrollPosition);
+    scrollBtn.addEventListener('click', handleScroll);
+    
+    // Vérification initiale
+    checkScrollPosition();
 }
 
 

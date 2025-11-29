@@ -1,0 +1,33 @@
+{
+  "id": "60701e47-8d34-420f-bcd8-14bef3e8254b",
+  "chantier": "test",
+  "created_at": "2025-11-29T19:18:04.410Z",
+  "updated_at": "2025-11-29T20:18:07.575439",
+  "status": "draft",
+  "form_data": {
+    "pv_id": "60701e47-8d34-420f-bcd8-14bef3e8254b",
+    "chantier": "test",
+    "email_conducteur": "charles.bergeat@gmail.com",
+    "email_entreprise": "charles.bergeat@gmail.com",
+    "responsable": "resp",
+    "materiel_numero": "152",
+    "materiel_type": "newtype",
+    "fournisseur": "abc",
+    "pv_type_sticky": "reception",
+    "date_reception": "2025-11-12",
+    "compteur_reception": "",
+    "date_retour": "5555-10-10",
+    "compteur_retour": "",
+    "carburant_reception": "0",
+    "fuite_moteur_reception": "non",
+    "fuite_hydraulique_reception": "non",
+    "fuite_gasoil_reception": "non",
+    "carburant_retour": "0",
+    "fuite_moteur_retour": "non",
+    "fuite_hydraulique_retour": "non",
+    "fuite_gasoil_retour": "non",
+    "observations_reception": "",
+    "observations_retour": "",
+    "created_at": "2025-11-29T19:18:04.410Z"
+  }
+}

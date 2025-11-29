@@ -203,6 +203,7 @@ def submit():
             'responsable': request.form.get('responsable', ''),
             'email_destinataire': request.form.get('email_destinataire', ''),
             'email_conducteur': request.form.get('email_conducteur', ''),
+            'email_entreprise': request.form.get('email_entreprise', ''),
             
             # Compteurs
             'compteur_reception': request.form.get('compteur_reception', ''),
@@ -258,7 +259,7 @@ def submit():
             sig_file = request.files['signature_reception']
             if sig_file and sig_file.filename:
                 # Lire le fichier et le convertir en base64
-                import base64
+
                 sig_data = sig_file.read()
                 form_data['signature_reception'] = f"data:image/png;base64,{base64.b64encode(sig_data).decode('utf-8')}"
         elif request.form.get('signature_reception'):
@@ -268,7 +269,7 @@ def submit():
             sig_file = request.files['signature_retour']
             if sig_file and sig_file.filename:
                 # Lire le fichier et le convertir en base64
-                import base64
+
                 sig_data = sig_file.read()
                 form_data['signature_retour'] = f"data:image/png;base64,{base64.b64encode(sig_data).decode('utf-8')}"
         elif request.form.get('signature_retour'):
@@ -339,8 +340,11 @@ def submit():
         base_url = request.url_root
         pdf_bytes = HTML(string=html_content, base_url=base_url).write_pdf()
         
-        # Préparer la liste des destinataires (seulement le conducteur de travaux)
+        # Préparer la liste des destinataires (conducteur + email entreprise)
         recipients = [form_data['email_conducteur']]
+        email_entreprise = form_data.get('email_entreprise', '').strip()
+        if email_entreprise and email_entreprise not in recipients:
+            recipients.append(email_entreprise)
         
         # Envoyer le PDF par email
         success, message = send_email_with_pdf(
@@ -557,12 +561,37 @@ def list_pv():
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     pv_data = json.load(f)
+                    form_data = pv_data.get('form_data', {})
+                    
+                    # Déterminer l'état de complétion (Réception/Retour)
+                    has_reception = bool(form_data.get('signature_reception'))
+                    has_retour = bool(form_data.get('signature_retour'))
+                    
+                    if has_reception and has_retour:
+                        completion_status = 'complete'
+                    elif has_reception:
+                        completion_status = 'reception_only'
+                    elif has_retour:
+                        completion_status = 'retour_only'
+                    else:
+                        completion_status = 'empty'
+                    
                     pv_list.append({
                         'id': pv_data['id'],
                         'chantier': pv_data.get('chantier', 'Sans nom'),
+                        'email_conducteur': form_data.get('email_conducteur', ''),
+                        'responsable': form_data.get('responsable', ''),
+                        'fournisseur': form_data.get('fournisseur', ''),
+                        'materiel_numero': form_data.get('materiel_numero', ''),
+                        'materiel_type': form_data.get('materiel_type', ''),
+                        'date_reception': form_data.get('date_reception', ''),
+                        'date_retour': form_data.get('date_retour', ''),
                         'created_at': pv_data.get('created_at', ''),
                         'updated_at': pv_data.get('updated_at', ''),
-                        'status': pv_data.get('status', 'draft')
+                        'status': pv_data.get('status', 'draft'),
+                        'completion_status': completion_status,
+                        'has_reception': has_reception,
+                        'has_retour': has_retour
                     })
             except Exception as e:
                 print(f"Erreur lors de la lecture de {file_path}: {e}")
@@ -718,7 +747,7 @@ def download_pdf():
             sig_file = request.files['signature_reception']
             if sig_file and sig_file.filename:
                 # Lire le fichier et le convertir en base64
-                import base64
+
                 sig_data = sig_file.read()
                 form_data['signature_reception'] = f"data:image/png;base64,{base64.b64encode(sig_data).decode('utf-8')}"
         elif request.form.get('signature_reception'):
@@ -728,7 +757,7 @@ def download_pdf():
             sig_file = request.files['signature_retour']
             if sig_file and sig_file.filename:
                 # Lire le fichier et le convertir en base64
-                import base64
+
                 sig_data = sig_file.read()
                 form_data['signature_retour'] = f"data:image/png;base64,{base64.b64encode(sig_data).decode('utf-8')}"
         elif request.form.get('signature_retour'):
