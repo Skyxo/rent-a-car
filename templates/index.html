@@ -34,7 +34,38 @@
         </div>
     </header>
 
-    <main class="container my-3" style="max-width: 1400px; margin-left: auto; margin-right: auto;">
+    <!-- Indicateur PV Actuel (Fixe en haut) -->
+    <div id="currentPVIndicator" class="current-pv-indicator alert alert-info d-flex align-items-start" role="alert">
+        <div class="container" style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; gap: 1rem;">
+            <div class="pv-indicator-icon me-2">
+                <i class="fas fa-file-alt fs-3"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div class="pv-indicator-status">
+                    <strong>Nouveau PV en cours</strong>
+                </div>
+                <div class="pv-indicator-details small mt-1">
+                    Le formulaire est vide et prêt à être rempli
+                </div>
+            </div>
+            <!-- Sélecteur de type PV compact (visible au scroll) -->
+            <div id="pvTypeCompact" class="pv-type-compact" style="display: none;">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Type de PV">
+                    <input type="radio" class="btn-check" name="pv_type_compact" id="pv_type_compact_reception" value="reception" checked>
+                    <label class="btn btn-outline-primary btn-sm" for="pv_type_compact_reception">
+                        <i class="fas fa-arrow-down"></i> Réception
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="pv_type_compact" id="pv_type_compact_retour" value="retour">
+                    <label class="btn btn-outline-primary btn-sm" for="pv_type_compact_retour">
+                        <i class="fas fa-arrow-up"></i> Retour
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="container" style="max-width: 1400px; margin-left: auto; margin-right: auto; margin-top: 0; padding-top: 1rem;">
         <!-- Messages Flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -65,18 +96,6 @@
                 </div>
             </div>
             <div class="card-body p-4">
-                <!-- Statut actuel -->
-                <div class="alert alert-info mb-4 d-flex align-items-center" role="alert">
-                    <i class="fas fa-info-circle fs-4 me-3"></i>
-                    <div class="flex-grow-1">
-                        <strong>Nouveau PV en cours</strong>
-                        <div class="small">Le formulaire est vide et prêt à être rempli</div>
-                    </div>
-                </div>
-
-                <!-- Séparateur -->
-                <hr class="my-4">
-
                 <!-- Section PV sauvegardés -->
                 <div class="mb-3 d-flex justify-content-between align-items-center">
                     <h6 class="text-muted mb-0">
@@ -111,17 +130,29 @@
                             </button>
                         </div>
                         
+                        <!-- Puces de filtres actifs -->
+                        <div id="activeFiltersContainer" class="mb-3" style="display: none;">
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <small class="text-muted me-2">
+                                    <i class="fas fa-filter me-1"></i>Filtres actifs:
+                                </small>
+                                <div id="activeFiltersBadges" class="d-flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+                        
                         <!-- Filtres -->
                         <div id="pvFiltersSection" style="display: none;">
                         <div class="row g-2">
                             <div class="col-md-3">
                                 <label class="form-label small text-muted mb-1">
-                                    <i class="fas fa-info-circle me-1"></i>Statut
+                                    <i class="fas fa-paper-plane me-1"></i>Dernier envoi
                                 </label>
-                                <select class="form-select" id="pvFilterStatus">
-                                    <option value="">Tous statuts</option>
-                                    <option value="draft">Brouillon</option>
-                                    <option value="sent">Envoyé</option>
+                                <select class="form-select" id="pvFilterLastSent">
+                                    <option value="">Toutes dates</option>
+                                    <option value="today">Aujourd'hui</option>
+                                    <option value="week">Cette semaine</option>
+                                    <option value="month">Ce mois</option>
+                                    <option value="never">Jamais envoyé</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -183,7 +214,17 @@
                                 <label class="form-label small text-muted mb-1">
                                     <i class="fas fa-calendar-check me-1"></i>Date réception
                                 </label>
-                                <input type="date" class="form-control" id="pvFilterDateReception">
+                                <select class="form-select" id="pvFilterDateReception">
+                                    <option value="">Toutes dates</option>
+                                    <option value="today">Aujourd'hui</option>
+                                    <option value="yesterday">Hier</option>
+                                    <option value="week">Cette semaine</option>
+                                    <option value="lastWeek">Semaine dernière</option>
+                                    <option value="month">Ce mois</option>
+                                    <option value="lastMonth">Mois dernier</option>
+                                    <option value="custom">Date précise...</option>
+                                </select>
+                                <input type="date" class="form-control mt-1 d-none" id="pvFilterDateReceptionCustom">
                             </div>
                         </div>
                         
@@ -192,7 +233,17 @@
                                 <label class="form-label small text-muted mb-1">
                                     <i class="fas fa-calendar-minus me-1"></i>Date retour
                                 </label>
-                                <input type="date" class="form-control" id="pvFilterDateRetour">
+                                <select class="form-select" id="pvFilterDateRetour">
+                                    <option value="">Toutes dates</option>
+                                    <option value="today">Aujourd'hui</option>
+                                    <option value="yesterday">Hier</option>
+                                    <option value="week">Cette semaine</option>
+                                    <option value="lastWeek">Semaine dernière</option>
+                                    <option value="month">Ce mois</option>
+                                    <option value="lastMonth">Mois dernier</option>
+                                    <option value="custom">Date précise...</option>
+                                </select>
+                                <input type="date" class="form-control mt-1 d-none" id="pvFilterDateRetourCustom">
                             </div>
                             <div class="col-md-9 d-flex align-items-end">
                                 <button type="button" class="btn btn-outline-secondary btn-sm" id="clearFiltersBtn">
@@ -248,11 +299,10 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="email_conducteur" class="form-label">Email conducteur de travaux <span class="text-danger">*</span></label>
-                            <select class="form-select select2-field" id="email_conducteur" name="email_conducteur" required style="width: 100%;">
-                                <option value=""></option>
+                            <label for="email_conducteur" class="form-label">Email(s) destinataire(s) <span class="text-danger">*</span></label>
+                            <select class="form-select select2-field" id="email_conducteur" name="email_conducteur" multiple required style="width: 100%;">
                             </select>
-                            <small class="text-muted">Le PV sera envoyé à cette adresse</small>
+                            <small class="text-muted">Le PV sera envoyé à ces adresses (plusieurs emails possibles)</small>
                         </div>
                     </div>
                     

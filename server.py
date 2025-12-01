@@ -202,7 +202,7 @@ def submit():
             'fournisseur': request.form.get('fournisseur', ''),
             'responsable': request.form.get('responsable', ''),
             'email_destinataire': request.form.get('email_destinataire', ''),
-            'email_conducteur': request.form.get('email_conducteur', ''),
+            'email_conducteur': request.form.getlist('email_conducteur'),  # Liste d'emails
             'email_entreprise': request.form.get('email_entreprise', ''),
             
             # Compteurs
@@ -307,8 +307,8 @@ def submit():
             flash('Le chantier est obligatoire', 'danger')
             return redirect(url_for('index'))
         
-        if not form_data.get('email_conducteur'):
-            flash('L\'email du conducteur de travaux est obligatoire', 'danger')
+        if not form_data.get('email_conducteur') or len(form_data.get('email_conducteur', [])) == 0:
+            flash('Au moins un email destinataire est obligatoire', 'danger')
             return redirect(url_for('index'))
         
         # Optimiser les signatures si présentes
@@ -340,8 +340,8 @@ def submit():
         base_url = request.url_root
         pdf_bytes = HTML(string=html_content, base_url=base_url).write_pdf()
         
-        # Préparer la liste des destinataires (conducteur + email entreprise)
-        recipients = [form_data['email_conducteur']]
+        # Préparer la liste des destinataires (tous les emails conducteur + email entreprise)
+        recipients = [email.strip() for email in form_data.get('email_conducteur', []) if email.strip()]
         email_entreprise = form_data.get('email_entreprise', '').strip()
         if email_entreprise and email_entreprise not in recipients:
             recipients.append(email_entreprise)
@@ -369,7 +369,7 @@ def submit():
                 'chantier': form_data['chantier'],
                 'created_at': datetime.now().isoformat(),
                 'updated_at': datetime.now().isoformat(),
-                'status': 'sent',  # Marquer comme envoyé
+                'last_sent_date': datetime.now().isoformat(),  # Date du dernier envoi
                 'form_data': form_data
             }
             
@@ -526,7 +526,7 @@ def save_pv():
             'chantier': data.get('chantier', 'Sans nom'),
             'created_at': data.get('created_at', datetime.now().isoformat()),
             'updated_at': datetime.now().isoformat(),
-            'status': 'draft',
+            'last_sent_date': None,  # Pas encore envoyé
             'form_data': data
         }
         
@@ -588,7 +588,7 @@ def list_pv():
                         'date_retour': form_data.get('date_retour', ''),
                         'created_at': pv_data.get('created_at', ''),
                         'updated_at': pv_data.get('updated_at', ''),
-                        'status': pv_data.get('status', 'draft'),
+                        'last_sent_date': pv_data.get('last_sent_date', None),
                         'completion_status': completion_status,
                         'has_reception': has_reception,
                         'has_retour': has_retour
@@ -691,7 +691,7 @@ def download_pdf():
             'fournisseur': request.form.get('fournisseur', ''),
             'responsable': request.form.get('responsable', ''),
             'email_destinataire': request.form.get('email_destinataire', ''),
-            'email_conducteur': request.form.get('email_conducteur', ''),
+            'email_conducteur': request.form.getlist('email_conducteur'),  # Liste d'emails
             
             # Compteurs
             'compteur_reception': request.form.get('compteur_reception', ''),
@@ -838,7 +838,7 @@ def download_pdf():
             'chantier': form_data['chantier'],
             'created_at': datetime.now().isoformat(),
             'updated_at': datetime.now().isoformat(),
-            'status': 'downloaded',  # Marquer comme téléchargé
+            'last_sent_date': None,  # Pas envoyé, juste téléchargé
             'form_data': form_data
         }
         

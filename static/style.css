@@ -16,6 +16,12 @@
 body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     background-color: #f5f5f5;
+    padding-top: 0;
+}
+
+/* Padding pour l'indicateur PV fixe */
+body.has-pv-indicator {
+    padding-top: 70px;
 }
 
 /* Réduction des espacements globaux */
@@ -457,6 +463,226 @@ h5 {
     background-color: #f8d7da;
     color: #721c24;
     border-left: 4px solid #dc3545;
+}
+
+/* Indicateur de PV actuel */
+.current-pv-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1040;
+    border-radius: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    margin-bottom: 0 !important;
+    max-width: 100%;
+    padding: 0.75rem 1rem;
+    min-height: 70px;
+}
+
+.current-pv-indicator .container {
+    padding: 0;
+    align-items: center !important;
+}
+
+.pv-indicator-icon {
+    flex-shrink: 0;
+    color: inherit;
+    opacity: 0.8;
+}
+
+.pv-indicator-status {
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+.pv-indicator-details {
+    color: rgba(0, 0, 0, 0.7);
+    line-height: 1.5;
+}
+
+.alert-warning .pv-indicator-details {
+    color: rgba(0, 0, 0, 0.65);
+}
+
+/* Sélecteur de type PV compact dans l'indicateur */
+.pv-type-compact {
+    flex-shrink: 0;
+    animation: slideInRight 0.3s ease;
+    margin-left: auto;
+}
+
+.pv-type-compact .btn-group {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pv-type-compact .btn-outline-primary {
+    border-color: #0d6efd;
+    color: #0d6efd;
+    background: white;
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+    font-weight: 500;
+}
+
+.pv-type-compact .btn-outline-primary:hover {
+    background-color: #0d6efd;
+    color: white;
+}
+
+.pv-type-compact .btn-check:checked + .btn-outline-primary {
+    background-color: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Conteneur de notifications fixe en haut */
+.notification-container {
+    position: fixed;
+    top: 100px; /* Sous l'indicateur PV */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1050;
+    width: 90%;
+    max-width: 600px;
+    pointer-events: none;
+}
+
+/* Notification individuelle */
+.notification {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Contenu de la notification */
+.notification-content {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    gap: 0.75rem;
+}
+
+.notification-icon {
+    flex-shrink: 0;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.notification-message {
+    flex-grow: 1;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.notification-close {
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    font-size: 1.25rem;
+    color: inherit;
+}
+
+.notification-close:hover {
+    opacity: 1;
+}
+
+/* Barre de progression */
+.notification-progress {
+    height: 4px;
+    background: rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.notification-progress-bar {
+    height: 100%;
+    width: 100%;
+    background: currentColor;
+    transition: width 0.1s linear;
+}
+
+/* Types de notifications */
+.notification-success {
+    border-left: 4px solid #28a745;
+    color: #155724;
+}
+
+.notification-success .notification-icon {
+    color: #28a745;
+}
+
+.notification-success .notification-progress-bar {
+    background: #28a745;
+}
+
+.notification-danger,
+.notification-error {
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+}
+
+.notification-danger .notification-icon,
+.notification-error .notification-icon {
+    color: #dc3545;
+}
+
+.notification-danger .notification-progress-bar,
+.notification-error .notification-progress-bar {
+    background: #dc3545;
+}
+
+.notification-warning {
+    border-left: 4px solid #ffc107;
+    color: #856404;
+}
+
+.notification-warning .notification-icon {
+    color: #ffc107;
+}
+
+.notification-warning .notification-progress-bar {
+    background: #ffc107;
+}
+
+.notification-info {
+    border-left: 4px solid #17a2b8;
+    color: #0c5460;
+}
+
+.notification-info .notification-icon {
+    color: #17a2b8;
+}
+
+.notification-info .notification-progress-bar {
+    background: #17a2b8;
 }
 
 /* Footer */
@@ -1008,61 +1234,201 @@ h5 {
 @media (max-width: 768px) {
     /* Header optimisé mobile */
     .clc-header {
-        padding: 1rem 0;
+        padding: 0.75rem 0;
     }
     
-    .clc-header h1 {
-        font-size: 1.2rem;
+    .clc-header h1,
+    .clc-header h2 {
+        font-size: 1.1rem;
         line-height: 1.3;
+        margin-bottom: 0.3rem;
     }
     
-    .clc-logo {
-        max-width: 200px;
+    .fmb-logo-text img {
+        max-width: 250px !important;
+        width: 100% !important;
     }
     
     /* Container et espacements */
     .container {
-        padding-left: 15px;
-        padding-right: 15px;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+        max-width: 100% !important;
     }
     
     main.container {
-        margin-top: 1rem !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* Padding pour indicateur fixe */
+    body.has-pv-indicator {
+        padding-top: 80px;
+    }
+    
+    :root {
+        --pv-indicator-height: 80px;
+    }
+    
+    /* Indicateur PV mobile */
+    .current-pv-indicator {
+        padding: 0.75rem 12px;
+    }
+    
+    .current-pv-indicator .container {
+        padding: 0;
+        max-width: 100% !important;
+    }
+    
+    .pv-indicator-icon {
+        margin-right: 0.75rem !important;
+    }
+    
+    .pv-indicator-icon i {
+        font-size: 1.5rem !important;
+    }
+    
+    .pv-indicator-status {
+        font-size: 0.9rem;
+    }
+    
+    .pv-indicator-details {
+        font-size: 0.8rem;
+    }
+    
+    /* Sélecteur compact mobile */
+    .pv-type-compact .btn-outline-primary {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+    }
+    
+    .pv-type-compact .btn-outline-primary i {
+        font-size: 0.75rem;
+    }
+    
+    /* Notifications mobile */
+    .notification-container {
+        top: 90px;
+        width: 95%;
+    }
+    
+    .notification-content {
+        padding: 0.75rem;
+        gap: 0.5rem;
+    }
+    
+    .notification-icon {
+        font-size: 1.25rem;
+    }
+    
+    .notification-message {
+        font-size: 0.875rem;
+    }
+    
+    /* Boutons principaux responsive */
+    .btn {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+        white-space: normal;
+        text-align: center;
+    }
+    
+    .btn-lg {
+        font-size: 0.95rem;
+        padding: 0.6rem 1rem;
     }
     
     /* Cartes PV en mobile */
     .pv-card {
         padding: 0.75rem;
+        margin-bottom: 0.75rem;
     }
     
     .pv-card-title {
-        font-size: 1rem;
+        font-size: 0.95rem;
+        line-height: 1.3;
     }
     
     .pv-card-meta {
         flex-direction: column;
         gap: 0.25rem;
+        font-size: 0.8rem;
+    }
+    
+    .pv-card-badges {
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+    
+    .pv-card-badges span {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .pv-card-detail {
+        font-size: 0.8rem;
+        padding: 0.3rem 0;
     }
     
     /* Adapter les boutons en mobile */
     .pv-card-actions {
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
     }
     
     .pv-card-actions .btn {
+        font-size: 0.8rem;
+        padding: 0.45rem 0.5rem;
+        width: 100%;
+    }
+    
+    .pv-card-actions .pv-btn-delete {
+        grid-column: 1 / -1;
+    }
+    
+    /* Liste PV scrollable */
+    .pv-list-scrollable {
+        max-height: 60vh;
+    }
+    
+    /* Filtres en mode empilé */
+    #pvFiltersSection .row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    
+    #pvFiltersSection .col-md-3 {
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
+        margin-bottom: 0.5rem;
+    }
+    
+    #pvFiltersSection .form-label {
+        font-size: 0.8rem;
+        margin-bottom: 0.2rem;
+    }
+    
+    #pvFiltersSection .form-select {
         font-size: 0.85rem;
-        padding: 0.5rem;
+        padding: 0.4rem 0.6rem;
+    }
+    
+    /* Badges de filtres actifs */
+    .badge {
+        font-size: 0.75rem !important;
+        padding: 0.35rem 0.5rem !important;
     }
     
     /* Cards */
     .card {
-        margin-bottom: 1rem;
-        border-radius: 6px;
+        margin-bottom: 0.75rem;
+        border-radius: 8px;
     }
     
     .clc-card-header {
-        font-size: 1rem;
-        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        padding: 0.65rem 0.85rem;
     }
     
     .card-body {
@@ -1071,61 +1437,137 @@ h5 {
     
     /* Formulaires */
     .form-label {
-        font-size: 0.9rem;
-        margin-bottom: 0.4rem;
+        font-size: 0.85rem;
+        margin-bottom: 0.3rem;
+        font-weight: 500;
     }
     
     .form-control,
     .form-select {
-        font-size: 0.95rem;
-        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+        padding: 0.5rem 0.65rem;
+    }
+    
+    textarea.form-control {
+        min-height: 80px;
+    }
+    
+    small, .text-muted {
+        font-size: 0.75rem;
+    }
+    
+    /* Select2 mobile */
+    .select2-container--bootstrap-5 .select2-selection {
+        min-height: 38px !important;
+        font-size: 0.9rem;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection__rendered {
+        padding: 0.5rem 0.65rem;
     }
     
     /* Boutons radio en mode vertical sur mobile */
     .btn-group {
+        display: flex !important;
         flex-direction: column !important;
+        width: 100%;
     }
     
     .btn-group .btn {
-        border-radius: 4px !important;
-        margin-bottom: 0.25rem;
+        border-radius: 6px !important;
+        margin-bottom: 0.4rem;
         width: 100% !important;
+        text-align: center;
+    }
+    
+    .btn-group label {
+        margin-bottom: 0 !important;
     }
     
     /* Tableaux d'inspection */
+    .table-responsive {
+        margin-left: -0.75rem;
+        margin-right: -0.75rem;
+        padding: 0 0.75rem;
+    }
+    
     .inspection-table {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
     }
     
     .inspection-table th,
     .inspection-table td {
-        padding: 0.5rem 0.3rem;
+        padding: 0.4rem 0.25rem;
+        font-size: 0.75rem;
+        white-space: normal;
+        word-break: break-word;
     }
     
-    /* Masquer colonnes moins importantes sur mobile */
+    .inspection-table th {
+        font-weight: 600;
+    }
+    
+    /* Forcer le scroll horizontal pour les tableaux */
     .table-responsive {
+        display: block;
+        width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        margin-bottom: 1rem;
+    }
+    
+    /* Photos upload en mobile */
+    .multi-photo-container {
+        padding: 0.5rem;
+    }
+    
+    .photo-preview-item {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .photo-preview-item img {
+        max-width: 100%;
+        max-height: 100%;
+    }
+    
+    /* Bouton add photo responsive */
+    .btn-add-photo {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
     }
     
     /* Signatures - taille réduite sur mobile */
     .signature-container {
-        max-height: 150px;
+        max-height: 180px;
+        min-height: 150px;
         overflow: hidden !important;
         max-width: 100% !important;
+        margin-bottom: 0.75rem;
     }
     
     .signature-canvas {
-        max-height: 150px;
+        max-height: 180px;
         width: 100% !important;
         max-width: 100% !important;
+        touch-action: none;
+    }
+    
+    .signature-pad-body {
+        padding: 0.5rem;
+    }
+    
+    /* Boutons de signature */
+    .btn-clear-signature {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.7rem;
     }
     
     /* Footer */
     .clc-footer {
-        margin-top: 2rem !important;
+        margin-top: 1.5rem !important;
         padding: 1rem 0;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
     }
     
     /* Gestion des PV - Stack vertical sur mobile */
@@ -1134,20 +1576,59 @@ h5 {
         padding: 0.4rem 0.8rem;
     }
     
-    /* Boutons d'action - Stack vertical */
-    .row.g-3 {
-        gap: 0.75rem !important;
+    /* Boutons d'action principaux */
+    .row.g-3 > div {
+        width: 100%;
+        padding: 0 !important;
+        margin-bottom: 0.75rem;
     }
     
     #saveDraftBtn,
-    #sendEmailBtn {
+    #sendEmailBtn,
+    #downloadPdfBtn {
+        width: 100%;
         font-size: 0.95rem;
-        padding: 0.75rem;
+        padding: 0.75rem 1rem;
     }
     
     #saveDraftBtn small,
-    #sendEmailBtn small {
+    #sendEmailBtn small,
+    #downloadPdfBtn small {
         font-size: 0.75rem;
+        display: block;
+        margin-top: 0.2rem;
+    }
+    
+    /* Input groups compacts */
+    .input-group {
+        flex-wrap: nowrap;
+    }
+    
+    .input-group .btn {
+        font-size: 0.8rem;
+        padding: 0.5rem 0.65rem;
+    }
+    
+    /* Modal responsive */
+    .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    
+    .modal-content {
+        border-radius: 8px;
+    }
+    
+    .modal-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .modal-title {
+        font-size: 1rem;
     }
     
     /* Photos - Grille adaptative */
@@ -1164,83 +1645,238 @@ h5 {
 @media (max-width: 576px) {
     /* Header ultra compact */
     .clc-header {
-        padding: 0.75rem 0;
+        padding: 0.6rem 0;
     }
     
-    .clc-header h1 {
-        font-size: 1rem;
-        margin-top: 0.5rem;
+    .clc-header h1,
+    .clc-header h2 {
+        font-size: 0.95rem;
+        margin-top: 0.3rem;
+        margin-bottom: 0.3rem;
     }
     
-    .clc-logo {
-        max-width: 150px;
+    .fmb-logo-text img {
+        max-width: 200px !important;
+        width: 100% !important;
     }
     
-    /* Espacements réduits */
+    /* Espacements ultra réduits */
     .container {
-        padding-left: 10px;
-        padding-right: 10px;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
     }
     
     main.container {
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.5rem !important;
+        margin-top: 0.4rem !important;
+        margin-bottom: 0.4rem !important;
     }
     
-    /* Cards compactes */
+    /* Padding pour indicateur fixe */
+    body.has-pv-indicator {
+        padding-top: 70px;
+    }
+    
+    :root {
+        --pv-indicator-height: 70px;
+    }
+    
+    /* Indicateur PV ultra compact */
+    .current-pv-indicator {
+        padding: 0.6rem 8px;
+    }
+    
+    .current-pv-indicator .container {
+        padding: 0;
+        max-width: 100% !important;
+    }
+    
+    .pv-indicator-icon {
+        margin-right: 0.5rem !important;
+    }
+    
+    .pv-indicator-icon i {
+        font-size: 1.3rem !important;
+    }
+    
+    .pv-indicator-status {
+        font-size: 0.85rem;
+    }
+    
+    .pv-indicator-status strong {
+        display: block;
+        margin-bottom: 0.15rem;
+    }
+    
+    .pv-indicator-details {
+        font-size: 0.75rem;
+        line-height: 1.4;
+    }
+    
+    .pv-indicator-details > div {
+        margin-bottom: 0.1rem !important;
+    }
+    
+    /* Sélecteur compact ultra petit - juste les icônes */
+    .pv-type-compact .btn-outline-primary {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.4rem;
+    }
+    
+    .pv-type-compact .btn-outline-primary i {
+        font-size: 0.7rem;
+        margin-right: 0.15rem;
+    }
+    
+    /* Notifications ultra compact */
+    .notification-container {
+        top: 80px;
+        width: 98%;
+    }
+    
+    .notification-content {
+        padding: 0.6rem;
+        gap: 0.4rem;
+    }
+    
+    .notification-icon {
+        font-size: 1.1rem;
+    }
+    
+    .notification-message {
+        font-size: 0.8rem;
+    }
+    
+    .notification-close {
+        font-size: 1rem;
+    }
+    
+    /* Boutons ultra compacts */
+    .btn {
+        font-size: 0.8rem;
+        padding: 0.45rem 0.6rem;
+    }
+    
+    .btn-sm {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.5rem;
+    }
+    
+    /* Cards ultra compactes */
     .card {
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.6rem;
+        border-radius: 6px;
     }
     
     .clc-card-header {
-        font-size: 0.95rem;
-        padding: 0.6rem 0.75rem;
+        font-size: 0.85rem;
+        padding: 0.5rem 0.65rem;
     }
     
     .card-body {
-        padding: 0.6rem;
+        padding: 0.5rem;
     }
     
-    /* Formulaires compacts */
+    /* Cartes PV ultra compactes */
+    .pv-card {
+        padding: 0.6rem;
+        margin-bottom: 0.6rem;
+    }
+    
+    .pv-card-title {
+        font-size: 0.9rem;
+    }
+    
+    .pv-card-detail {
+        font-size: 0.75rem;
+        padding: 0.25rem 0;
+    }
+    
+    .pv-card-actions {
+        gap: 0.4rem;
+    }
+    
+    .pv-card-actions .btn {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.5rem;
+    }
+    
+    /* Formulaires ultra compacts */
     .form-label {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
+        margin-bottom: 0.25rem;
     }
     
     .form-control,
     .form-select,
     textarea {
-        font-size: 0.9rem;
-        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+        padding: 0.4rem 0.55rem;
+    }
+    
+    textarea.form-control {
+        min-height: 70px;
     }
     
     small, .text-muted {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
+    }
+    
+    /* Select2 très compact */
+    .select2-container--bootstrap-5 .select2-selection {
+        min-height: 36px !important;
+        font-size: 0.85rem;
+    }
+    
+    .select2-container--bootstrap-5 .select2-selection__rendered {
+        padding: 0.4rem 0.55rem;
     }
     
     /* Tableaux - Scroll horizontal facilité */
     .inspection-table {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         min-width: 100%;
     }
     
     .inspection-table th,
     .inspection-table td {
-        padding: 0.4rem 0.2rem;
-        white-space: nowrap;
+        padding: 0.35rem 0.2rem;
+        font-size: 0.7rem;
+    }
+    
+    /* Forcer les colonnes à rester empilées */
+    .row > [class*='col-'] {
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
     }
     
     /* Section dates côte à côte optimisée */
     .date-box {
-        padding: 0.5rem;
+        padding: 0.4rem;
     }
     
     .date-box h3 {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
+        margin-bottom: 0.4rem;
     }
     
-    /* Observations en mode colonne sur très petit écran */
+    /* Observations compactes */
     .observations-box {
         margin-bottom: 0.5rem;
+    }
+    
+    .observations-box h3 {
+        font-size: 0.85rem;
+    }
+    
+    /* Photos ultra compactes */
+    .photo-preview-item {
+        width: 85px;
+        height: 85px;
+    }
+    
+    .btn-add-photo {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.6rem;
     }
     
     /* Signatures encore plus compactes */
@@ -1250,6 +1886,7 @@ h5 {
     
     .signature-canvas {
         max-height: 120px;
+        touch-action: none;
     }
     
     .btn-sm {
@@ -1281,12 +1918,12 @@ h5 {
         width: 100%;
     }
     
-    /* Photos - 1 par ligne sur très petit écran */
+    /* Photos - miniatures optimisées */
     .photo-preview img {
         max-height: 60px !important;
     }
     
-    /* Adapter la taille du bouton photo sur très petit écran */
+    /* Adapter la taille du bouton photo */
     .form-control[type="file"] {
         width: 42px;
         height: 42px;
@@ -1298,13 +1935,32 @@ h5 {
     
     /* Badges */
     .badge {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
+        padding: 0.3rem 0.45rem;
     }
     
     /* Alert messages compactes */
     .alert {
         padding: 0.5rem;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Modal ultra compact */
+    .modal-dialog {
+        margin: 0.3rem;
+    }
+    
+    .modal-header,
+    .modal-footer {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .modal-body {
+        padding: 0.75rem;
+    }
+    
+    .modal-title {
+        font-size: 0.95rem;
     }
 }
 
@@ -1446,12 +2102,12 @@ h5 {
 .sticky-pv-type-header {
     position: relative;
     transition: all 0.3s ease;
-    z-index: 1030;
+    z-index: 1035;
 }
 
 .sticky-pv-type-header.is-sticky {
     position: fixed;
-    top: 0;
+    top: var(--pv-indicator-height, 90px);
     left: 0;
     right: 0;
     width: 100%;
@@ -1617,6 +2273,17 @@ h5 {
     outline: none;
 }
 
+/* Style pour les options sélectionnées dans la liste déroulante */
+.select2-result-selected {
+    background-color: #e7f3ff !important;
+    color: #0066cc !important;
+    font-weight: 500;
+}
+
+.select2-results__option--highlighted.select2-result-selected {
+    background-color: #cce5ff !important;
+}
+
 /* Bouton de navigation scroll flottant */
 #scrollNavBtn {
     position: fixed;
@@ -1626,7 +2293,7 @@ h5 {
     height: 60px;
     border-radius: 50%;
     border: none;
-    z-index: 1000;
+    z-index: 1030;
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;

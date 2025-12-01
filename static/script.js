@@ -20,8 +20,7 @@ let autoSaveTimer = null;
 let lastAutoSave = null;
 let isAutoSaving = false;
 let hasUnsavedChanges = false;
-const AUTO_SAVE_DELAY = 3000; // 3 secondes après la dernière modification
-const PERIODIC_SAVE_INTERVAL = 30000; // 30 secondes
+const AUTO_SAVE_DELAY = 1000; // 1 seconde pour les champs texte
 
 // Champs avec historique
 const HISTORY_FIELDS = ['chantier', 'email_conducteur', 'email_entreprise', 'materiel_numero', 'materiel_type', 'fournisseur', 'responsable'];
@@ -33,15 +32,32 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeFormValidation();
     initializePhotoUploads();
     initializePVManagement();
+    initializePVSearch();
     loadSavedPVList();
     initializeRadioDeselect();
     initializePVTypeToggle();
     initializeSelect2Fields();
     initializeStickyHeader();
     initializeEmailEntreprise();
-    startPeriodicAutoSave();
     initScrollNavigation();
+    
+    // Ajouter la classe au body pour le padding de l'indicateur
+    document.body.classList.add('has-pv-indicator');
+    
+    // Définir la hauteur de l'indicateur en variable CSS
+    updateIndicatorHeight();
 });
+
+/**
+ * Met à jour la hauteur de l'indicateur en variable CSS
+ */
+function updateIndicatorHeight() {
+    const indicator = document.getElementById('currentPVIndicator');
+    if (indicator) {
+        const height = indicator.offsetHeight;
+        document.documentElement.style.setProperty('--pv-indicator-height', height + 'px');
+    }
+}
 
 /**
  * Permet de désélectionner les boutons radio en cliquant dessus une seconde fois
@@ -75,121 +91,124 @@ function initializeRadioDeselect() {
 }
 
 /**
+ * Bascule l'affichage des colonnes Réception/Retour selon le type de PV
+ */
+function togglePVColumns(type) {
+    // Mettre à jour les badges de titre de section
+    const badges = [
+        'pv_type_badge_dates',
+        'pv_type_badge_exterieur',
+        'pv_type_badge_fonctionnement',
+        'pv_type_badge_fluides',
+        'pv_type_badge_observations',
+        'pv_type_badge_signatures'
+    ];
+    
+    const label = type === 'reception' ? 'RÉCEPTION' : 'RETOUR';
+    const bgColor = type === 'reception' ? 'bg-success' : 'bg-info';
+    
+    badges.forEach(badgeId => {
+        const badge = document.getElementById(badgeId);
+        if (badge) {
+            badge.textContent = label;
+            badge.className = `badge ${bgColor} ms-2`;
+            badge.style.display = 'inline-block';
+        }
+    });
+    
+    // Sélectionner tous les tableaux d'inspection
+    const tables = document.querySelectorAll('.inspection-table');
+    
+    tables.forEach(table => {
+        const headers = table.querySelectorAll('thead th');
+        const rows = table.querySelectorAll('tbody tr');
+        
+        if (type === 'reception') {
+            // Afficher colonnes Réception (index 1 et 2), masquer Retour (index 3 et 4)
+            if (headers.length >= 5) {
+                headers[1].style.display = '';
+                headers[2].style.display = '';
+                headers[3].style.display = 'none';
+                headers[4].style.display = 'none';
+            }
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 5) {
+                    cells[1].style.display = '';
+                    cells[2].style.display = '';
+                    cells[3].style.display = 'none';
+                    cells[4].style.display = 'none';
+                }
+            });
+        } else {
+            // Masquer colonnes Réception, afficher Retour
+            if (headers.length >= 5) {
+                headers[1].style.display = 'none';
+                headers[2].style.display = 'none';
+                headers[3].style.display = '';
+                headers[4].style.display = '';
+            }
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 5) {
+                    cells[1].style.display = 'none';
+                    cells[2].style.display = 'none';
+                    cells[3].style.display = '';
+                    cells[4].style.display = '';
+                }
+            });
+        }
+    });
+    
+    // Gérer les sections Date/Compteur et Signatures
+    const receptionSections = document.querySelectorAll('[class*="reception"], .col-md-6:has(#date_reception)');
+    const retourSections = document.querySelectorAll('[class*="retour"], .col-md-6:has(#date_retour)');
+    
+    // Section Dates et Compteurs
+    const dateReceptionCol = document.querySelector('.col-md-6:has(#date_reception)');
+    const dateRetourCol = document.querySelector('.col-md-6:has(#date_retour)');
+    
+    if (type === 'reception') {
+        if (dateReceptionCol) dateReceptionCol.style.display = '';
+        if (dateRetourCol) dateRetourCol.style.display = 'none';
+    } else {
+        if (dateReceptionCol) dateReceptionCol.style.display = 'none';
+        if (dateRetourCol) dateRetourCol.style.display = '';
+    }
+    
+    // Section Fluides et Observations - utiliser les classes pv-reception-col et pv-retour-col
+    const receptionCols = document.querySelectorAll('.pv-reception-col');
+    const retourCols = document.querySelectorAll('.pv-retour-col');
+    
+    if (type === 'reception') {
+        receptionCols.forEach(col => col.style.display = '');
+        retourCols.forEach(col => col.style.display = 'none');
+    } else {
+        receptionCols.forEach(col => col.style.display = 'none');
+        retourCols.forEach(col => col.style.display = '');
+    }
+    
+    // Section Signatures
+    const signatureReceptionCol = document.querySelector('.col-md-6:has(#signatureReception)');
+    const signatureRetourCol = document.querySelector('.col-md-6:has(#signatureRetour)');
+    
+    if (type === 'reception') {
+        if (signatureReceptionCol) signatureReceptionCol.style.display = '';
+        if (signatureRetourCol) signatureRetourCol.style.display = 'none';
+    } else {
+        if (signatureReceptionCol) signatureReceptionCol.style.display = 'none';
+        if (signatureRetourCol) signatureRetourCol.style.display = '';
+    }
+}
+
+/**
  * Gère l'affichage conditionnel des colonnes Réception/Retour selon le type de PV
  */
 function initializePVTypeToggle() {
     const pvTypeStickyReception = document.getElementById('pv_type_sticky_reception');
     const pvTypeStickyRetour = document.getElementById('pv_type_sticky_retour');
-    
-    function togglePVColumns(type) {
-        // Mettre à jour les badges de titre de section
-        const badges = [
-            'pv_type_badge_dates',
-            'pv_type_badge_exterieur',
-            'pv_type_badge_fonctionnement',
-            'pv_type_badge_fluides',
-            'pv_type_badge_observations',
-            'pv_type_badge_signatures'
-        ];
-        
-        const label = type === 'reception' ? 'RÉCEPTION' : 'RETOUR';
-        const bgColor = type === 'reception' ? 'bg-success' : 'bg-info';
-        
-        badges.forEach(badgeId => {
-            const badge = document.getElementById(badgeId);
-            if (badge) {
-                badge.textContent = label;
-                badge.className = `badge ${bgColor} ms-2`;
-                badge.style.display = 'inline-block';
-            }
-        });
-        
-        // Sélectionner tous les tableaux d'inspection
-        const tables = document.querySelectorAll('.inspection-table');
-        
-        tables.forEach(table => {
-            const headers = table.querySelectorAll('thead th');
-            const rows = table.querySelectorAll('tbody tr');
-            
-            if (type === 'reception') {
-                // Afficher colonnes Réception (index 1 et 2), masquer Retour (index 3 et 4)
-                if (headers.length >= 5) {
-                    headers[1].style.display = '';
-                    headers[2].style.display = '';
-                    headers[3].style.display = 'none';
-                    headers[4].style.display = 'none';
-                }
-                
-                rows.forEach(row => {
-                    const cells = row.querySelectorAll('td');
-                    if (cells.length >= 5) {
-                        cells[1].style.display = '';
-                        cells[2].style.display = '';
-                        cells[3].style.display = 'none';
-                        cells[4].style.display = 'none';
-                    }
-                });
-            } else {
-                // Masquer colonnes Réception, afficher Retour
-                if (headers.length >= 5) {
-                    headers[1].style.display = 'none';
-                    headers[2].style.display = 'none';
-                    headers[3].style.display = '';
-                    headers[4].style.display = '';
-                }
-                
-                rows.forEach(row => {
-                    const cells = row.querySelectorAll('td');
-                    if (cells.length >= 5) {
-                        cells[1].style.display = 'none';
-                        cells[2].style.display = 'none';
-                        cells[3].style.display = '';
-                        cells[4].style.display = '';
-                    }
-                });
-            }
-        });
-        
-        // Gérer les sections Date/Compteur et Signatures
-        const receptionSections = document.querySelectorAll('[class*="reception"], .col-md-6:has(#date_reception)');
-        const retourSections = document.querySelectorAll('[class*="retour"], .col-md-6:has(#date_retour)');
-        
-        // Section Dates et Compteurs
-        const dateReceptionCol = document.querySelector('.col-md-6:has(#date_reception)');
-        const dateRetourCol = document.querySelector('.col-md-6:has(#date_retour)');
-        
-        if (type === 'reception') {
-            if (dateReceptionCol) dateReceptionCol.style.display = '';
-            if (dateRetourCol) dateRetourCol.style.display = 'none';
-        } else {
-            if (dateReceptionCol) dateReceptionCol.style.display = 'none';
-            if (dateRetourCol) dateRetourCol.style.display = '';
-        }
-        
-        // Section Fluides et Observations - utiliser les classes pv-reception-col et pv-retour-col
-        const receptionCols = document.querySelectorAll('.pv-reception-col');
-        const retourCols = document.querySelectorAll('.pv-retour-col');
-        
-        if (type === 'reception') {
-            receptionCols.forEach(col => col.style.display = '');
-            retourCols.forEach(col => col.style.display = 'none');
-        } else {
-            receptionCols.forEach(col => col.style.display = 'none');
-            retourCols.forEach(col => col.style.display = '');
-        }
-        
-        // Section Signatures
-        const signatureReceptionCol = document.querySelector('.col-md-6:has(#signatureReception)');
-        const signatureRetourCol = document.querySelector('.col-md-6:has(#signatureRetour)');
-        
-        if (type === 'reception') {
-            if (signatureReceptionCol) signatureReceptionCol.style.display = '';
-            if (signatureRetourCol) signatureRetourCol.style.display = 'none';
-        } else {
-            if (signatureReceptionCol) signatureReceptionCol.style.display = 'none';
-            if (signatureRetourCol) signatureRetourCol.style.display = '';
-        }
-    }
     
     // Écouteurs d'événements pour les boutons sticky
     if (pvTypeStickyReception) {
@@ -218,6 +237,8 @@ function initializePVTypeToggle() {
 function initializeStickyHeader() {
     const header = document.getElementById('stickyPVTypeHeader');
     const placeholder = document.getElementById('stickyPlaceholder');
+    const pvIndicator = document.getElementById('currentPVIndicator');
+    const pvTypeCompact = document.getElementById('pvTypeCompact');
     
     if (!header || !placeholder) return;
     
@@ -225,21 +246,34 @@ function initializeStickyHeader() {
     function checkSticky() {
         const headerRect = header.getBoundingClientRect();
         const headerHeight = header.offsetHeight;
+        const indicatorHeight = pvIndicator ? pvIndicator.offsetHeight : 0;
         
-        // Le header devient sticky quand son haut atteint ou dépasse le haut du viewport
-        if (headerRect.top <= 0 && !header.classList.contains('is-sticky')) {
-            // Activer le sticky
+        // Le header devient sticky quand son haut atteint la hauteur de l'indicateur
+        if (headerRect.top <= indicatorHeight && !header.classList.contains('is-sticky')) {
+            // Activer le sticky - mais on le cache car on utilise le compact
             placeholder.style.height = headerHeight + 'px';
             placeholder.style.display = 'block';
             header.classList.add('is-sticky');
+            header.style.display = 'none'; // Cacher le sticky original
+            
+            // Afficher le sélecteur compact dans l'indicateur
+            if (pvTypeCompact) {
+                pvTypeCompact.style.display = 'block';
+            }
         }
         // Désactiver le sticky uniquement quand le placeholder revient en vue
         else if (header.classList.contains('is-sticky')) {
             const placeholderRect = placeholder.getBoundingClientRect();
             // Vérifier si on a remonté jusqu'au placeholder
-            if (placeholderRect.top >= 0) {
+            if (placeholderRect.top >= indicatorHeight) {
                 header.classList.remove('is-sticky');
                 placeholder.style.display = 'none';
+                header.style.display = ''; // Réafficher le sticky original
+                
+                // Masquer le sélecteur compact
+                if (pvTypeCompact) {
+                    pvTypeCompact.style.display = 'none';
+                }
             }
         }
     }
@@ -258,6 +292,74 @@ function initializeStickyHeader() {
     
     // Vérification initiale
     checkSticky();
+    
+    // Synchroniser les deux sélecteurs de type PV
+    syncPVTypeSelectors();
+}
+
+/**
+ * Synchronise les trois sélecteurs de type PV (normal, sticky, compact)
+ */
+function syncPVTypeSelectors() {
+    const normalReception = document.getElementById('pv_type_reception');
+    const normalRetour = document.getElementById('pv_type_retour');
+    const stickyReception = document.getElementById('pv_type_sticky_reception');
+    const stickyRetour = document.getElementById('pv_type_sticky_retour');
+    const compactReception = document.getElementById('pv_type_compact_reception');
+    const compactRetour = document.getElementById('pv_type_compact_retour');
+    
+    const allRadios = [normalReception, normalRetour, stickyReception, stickyRetour, compactReception, compactRetour];
+    
+    function syncAll(source) {
+        const isReception = source.value === 'reception';
+        const pvType = isReception ? 'reception' : 'retour';
+        
+        // Synchroniser tous les sélecteurs
+        if (normalReception && normalRetour) {
+            normalReception.checked = isReception;
+            normalRetour.checked = !isReception;
+        }
+        if (stickyReception && stickyRetour) {
+            stickyReception.checked = isReception;
+            stickyRetour.checked = !isReception;
+        }
+        if (compactReception && compactRetour) {
+            compactReception.checked = isReception;
+            compactRetour.checked = !isReception;
+        }
+        
+        // Mettre à jour l'interface (colonnes, badges, etc.)
+        togglePVColumns(pvType);
+        
+        // Mettre à jour l'indicateur de statut
+        updatePVStatusBadge();
+    }
+    
+    // Écouter les clics sur les labels (pas les inputs)
+    allRadios.forEach(radio => {
+        if (radio) {
+            const label = document.querySelector(`label[for="${radio.id}"]`);
+            if (label) {
+                label.addEventListener('click', function(e) {
+                    // Si le bouton est déjà sélectionné, empêcher le clic
+                    if (radio.checked) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return false;
+                    }
+                    // Sinon, laisser le comportement normal se produire
+                    // Le change sera déclenché automatiquement
+                });
+            }
+            
+            // Écouter les changements pour synchroniser
+            radio.addEventListener('change', function() {
+                if (this.checked) {
+                    syncAll(this);
+                }
+            });
+        }
+    });
 }
 
 /**
@@ -384,10 +486,20 @@ function initializeFormPersistence() {
     form.addEventListener('change', function(e) {
         // Sauvegarder immédiatement sans délai pour les changements de choix
         performAutoSave();
+        // Mettre à jour l'indicateur si c'est un champ clé
+        if (['client', 'chantier', 'materiel_type', 'materiel_numero', 'date_reception', 'date_retour', 'pv_type'].includes(e.target.id || e.target.name)) {
+            updatePVStatusBadge();
+        }
     });
     
     // Auto-sauvegarde avec délai pour les inputs texte (pour ne pas surcharger)
-    form.addEventListener('input', debounce(scheduleAutoSave, 1000));
+    form.addEventListener('input', debounce(function(e) {
+        scheduleAutoSave();
+        // Mettre à jour l'indicateur pour les champs clés
+        if (['client', 'chantier', 'materiel_type', 'materiel_numero'].includes(e.target.id)) {
+            updatePVStatusBadge();
+        }
+    }, 1000));
 }
 
 /**
@@ -411,25 +523,21 @@ function scheduleAutoSave() {
 async function performAutoSave() {
     // Éviter les sauvegardes simultanées
     if (isAutoSaving) {
-        console.log('⏳ Sauvegarde en cours, attente...');
         return;
     }
     
     // Vérifier qu'il y a un chantier (minimum requis)
     const chantier = document.getElementById('chantier').value;
     if (!chantier || chantier.trim() === '') {
-        console.log('Auto-sauvegarde ignorée : chantier vide');
         return;
     }
     
     isAutoSaving = true;
-    console.log('💾 Démarrage auto-sauvegarde...');
     
     try {
         const result = await savePVDraft(true); // true = silent
         if (result) {
             lastAutoSave = new Date();
-            console.log('✅ Auto-sauvegarde effectuée:', lastAutoSave.toLocaleTimeString());
             
             // Afficher discrètement un indicateur visuel
             showAutoSaveIndicator();
@@ -464,15 +572,6 @@ function showAutoSaveIndicator() {
 /**
  * Démarre la sauvegarde périodique automatique
  */
-function startPeriodicAutoSave() {
-    setInterval(async () => {
-        // Sauvegarder uniquement s'il y a des changements non sauvegardés
-        if (hasUnsavedChanges) {
-            await performAutoSave();
-        }
-    }, PERIODIC_SAVE_INTERVAL);
-}
-
 /**
  * Sauvegarde l'état du formulaire dans localStorage
  */
@@ -496,9 +595,8 @@ function saveFormData() {
     
     try {
         localStorage.setItem('pvMaterielFormData', JSON.stringify(formData));
-        console.log('Données sauvegardées automatiquement');
     } catch (e) {
-        console.warn('Impossible de sauvegarder dans localStorage:', e);
+        // Silencieux si erreur localStorage
     }
 }
 
@@ -519,7 +617,6 @@ function loadFormData() {
             const hoursDiff = (now - saveTime) / (1000 * 60 * 60);
             
             if (hoursDiff > 24) {
-                console.log('Données trop anciennes, ignorées');
                 localStorage.removeItem('pvMaterielFormData');
                 return;
             }
@@ -533,10 +630,8 @@ function loadFormData() {
                 localStorage.removeItem('pvMaterielFormData');
             }
         }
-        
-        console.log('Vérification de sauvegarde automatique effectuée');
     } catch (e) {
-        console.warn('Impossible de charger depuis localStorage:', e);
+        // Silencieux si erreur localStorage
     }
 }
 
@@ -1018,9 +1113,6 @@ async function loadSavedPVList() {
             // Créer les cartes PV
             container.innerHTML = '';
             data.pv_list.forEach(pv => {
-                // Debug: afficher les données du PV
-                console.log('PV data:', pv);
-                
                 const date = new Date(pv.updated_at);
                 const dateStr = date.toLocaleDateString('fr-FR', {
                     day: '2-digit',
@@ -1032,10 +1124,27 @@ async function loadSavedPVList() {
                     minute: '2-digit'
                 });
                 
-                // Déterminer le statut
-                const statusClass = pv.status === 'sent' ? 'sent' : 'draft';
-                const statusText = pv.status === 'sent' ? 'Envoyé' : 'Brouillon';
-                const statusIcon = pv.status === 'sent' ? 'check-circle' : 'edit';
+                // Déterminer si le PV a été envoyé et quand
+                let lastSentBadge = '';
+                if (pv.last_sent_date) {
+                    const sentDate = new Date(pv.last_sent_date);
+                    const sentDateStr = sentDate.toLocaleDateString('fr-FR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                    const sentTimeStr = sentDate.toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    lastSentBadge = `<span class="pv-card-status sent">
+                        <i class="fas fa-paper-plane"></i> Envoyé le ${sentDateStr} à ${sentTimeStr}
+                    </span>`;
+                } else {
+                    lastSentBadge = `<span class="pv-card-status draft">
+                        <i class="fas fa-clock"></i> Pas encore envoyé
+                    </span>`;
+                }
                 
                 // Déterminer l'état de complétion
                 const completionStatus = pv.completion_status || 'empty';
@@ -1058,7 +1167,8 @@ async function loadSavedPVList() {
                 
                 // Ajouter les données pour la recherche
                 card.dataset.chantier = (pv.chantier || '').toLowerCase();
-                card.dataset.emailConducteur = (pv.email_conducteur || '').toLowerCase();
+                const emailConducteurStr = Array.isArray(pv.email_conducteur) ? pv.email_conducteur.join(' ') : (pv.email_conducteur || '');
+                card.dataset.emailConducteur = emailConducteurStr.toLowerCase();
                 card.dataset.responsable = (pv.responsable || '').toLowerCase();
                 card.dataset.fournisseur = (pv.fournisseur || '').toLowerCase();
                 card.dataset.materielNumero = (pv.materiel_numero || '').toLowerCase();
@@ -1066,11 +1176,12 @@ async function loadSavedPVList() {
                 card.dataset.completionStatus = completionStatus;
                 card.dataset.dateReception = pv.date_reception || '';
                 card.dataset.dateRetour = pv.date_retour || '';
+                card.dataset.lastSentDate = pv.last_sent_date || '';
                 
                 // Créer un texte de recherche complet avec tous les formats de dates possibles
                 let searchText = [
                     pv.chantier || '',
-                    pv.email_conducteur || '',
+                    Array.isArray(pv.email_conducteur) ? pv.email_conducteur.join(' ') : (pv.email_conducteur || ''),
                     pv.responsable || '',
                     pv.fournisseur || '',
                     pv.materiel_numero || '',
@@ -1116,12 +1227,16 @@ async function loadSavedPVList() {
                 
                 // Email conducteur (toujours affiché si présent)
                 if (pv.email_conducteur) {
-                    detailsHTML += `
-                        <div class="pv-card-detail">
-                            <i class="fas fa-envelope"></i>
-                            <span>${pv.email_conducteur}</span>
-                        </div>
-                    `;
+                    const emails = Array.isArray(pv.email_conducteur) ? pv.email_conducteur : [pv.email_conducteur];
+                    const emailText = emails.filter(e => e).join(', ');
+                    if (emailText) {
+                        detailsHTML += `
+                            <div class="pv-card-detail">
+                                <i class="fas fa-envelope"></i>
+                                <span>${emailText}</span>
+                            </div>
+                        `;
+                    }
                 }
                 
                 // Responsable chantier
@@ -1175,8 +1290,6 @@ async function loadSavedPVList() {
                     `;
                 }
                 
-                console.log('Details HTML:', detailsHTML);
-                
                 card.innerHTML = `
                     <div class="pv-card-header">
                         <h6 class="pv-card-title">
@@ -1185,9 +1298,7 @@ async function loadSavedPVList() {
                         </h6>
                         <div class="pv-card-badges">
                             ${completionBadge}
-                            <span class="pv-card-status ${statusClass}">
-                                <i class="fas fa-${statusIcon}"></i> ${statusText}
-                            </span>
+                            ${lastSentBadge}
                         </div>
                     </div>
                     <div class="pv-card-meta">
@@ -1226,14 +1337,13 @@ async function loadSavedPVList() {
             // Attacher les événements
             attachPVCardEvents();
             
-            // Initialiser la recherche et le filtrage
-            initializePVSearch();
-            
             // Peupler les dropdowns de filtre
             populateFilterDropdowns(data.pv_list);
             
-            // Mettre à jour le compteur filtré
-            updateFilterCount();
+            // Appliquer les filtres après que le DOM soit mis à jour
+            requestAnimationFrame(() => {
+                filterPVCards();
+            });
             
             // Vérifier si la liste est scrollable
             checkScrollableList();
@@ -1330,7 +1440,7 @@ function attachPVCardEvents() {
  */
 function initializePVSearch() {
     const searchInput = document.getElementById('pvSearchInput');
-    const filterStatus = document.getElementById('pvFilterStatus');
+    const filterLastSent = document.getElementById('pvFilterLastSent');
     const filterCompletion = document.getElementById('pvFilterCompletion');
     const filterChantier = document.getElementById('pvFilterChantier');
     const filterMaterielType = document.getElementById('pvFilterMaterielType');
@@ -1338,7 +1448,9 @@ function initializePVSearch() {
     const filterFournisseur = document.getElementById('pvFilterFournisseur');
     const filterEmailConducteur = document.getElementById('pvFilterEmailConducteur');
     const filterDateReception = document.getElementById('pvFilterDateReception');
+    const filterDateReceptionCustom = document.getElementById('pvFilterDateReceptionCustom');
     const filterDateRetour = document.getElementById('pvFilterDateRetour');
+    const filterDateRetourCustom = document.getElementById('pvFilterDateRetourCustom');
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
     const toggleFiltersBtn = document.getElementById('toggleFiltersBtn');
     const filtersSection = document.getElementById('pvFiltersSection');
@@ -1350,8 +1462,8 @@ function initializePVSearch() {
         searchInput.addEventListener('input', filterPVCards);
     }
     
-    if (filterStatus) {
-        filterStatus.addEventListener('change', function() {
+    if (filterLastSent) {
+        filterLastSent.addEventListener('change', function() {
             filterPVCards();
             populateFilterDropdowns();
         });
@@ -1401,6 +1513,22 @@ function initializePVSearch() {
     
     if (filterDateReception) {
         filterDateReception.addEventListener('change', function() {
+            // Afficher/masquer le champ de date personnalisée
+            if (filterDateReceptionCustom) {
+                if (this.value === 'custom') {
+                    filterDateReceptionCustom.classList.remove('d-none');
+                } else {
+                    filterDateReceptionCustom.classList.add('d-none');
+                    filterDateReceptionCustom.value = '';
+                }
+            }
+            filterPVCards();
+            populateFilterDropdowns();
+        });
+    }
+    
+    if (filterDateReceptionCustom) {
+        filterDateReceptionCustom.addEventListener('change', function() {
             filterPVCards();
             populateFilterDropdowns();
         });
@@ -1413,22 +1541,54 @@ function initializePVSearch() {
         });
     }
     
+    if (filterDateRetour) {
+        filterDateRetour.addEventListener('change', function() {
+            // Afficher/masquer le champ de date personnalisée
+            if (filterDateRetourCustom) {
+                if (this.value === 'custom') {
+                    filterDateRetourCustom.classList.remove('d-none');
+                } else {
+                    filterDateRetourCustom.classList.add('d-none');
+                    filterDateRetourCustom.value = '';
+                }
+            }
+            filterPVCards();
+            populateFilterDropdowns();
+        });
+    }
+    
+    if (filterDateRetourCustom) {
+        filterDateRetourCustom.addEventListener('change', function() {
+            filterPVCards();
+            populateFilterDropdowns();
+        });
+    }
+    
     if (clearFiltersBtn) {
         clearFiltersBtn.addEventListener('click', function() {
             // Réinitialiser tous les filtres
             if (searchInput) searchInput.value = '';
-            if (filterStatus) filterStatus.value = '';
+            if (filterLastSent) filterLastSent.value = '';
             if (filterCompletion) filterCompletion.value = '';
-            if (filterChantier) filterChantier.value = '';
-            if (filterMaterielType) filterMaterielType.value = '';
-            if (filterResponsable) filterResponsable.value = '';
-            if (filterFournisseur) filterFournisseur.value = '';
-            if (filterEmailConducteur) filterEmailConducteur.value = '';
+            if (filterChantier) $(filterChantier).val('').trigger('change');
+            if (filterMaterielType) $(filterMaterielType).val('').trigger('change');
+            if (filterResponsable) $(filterResponsable).val('').trigger('change');
+            if (filterFournisseur) $(filterFournisseur).val('').trigger('change');
+            if (filterEmailConducteur) $(filterEmailConducteur).val('').trigger('change');
             if (filterDateReception) filterDateReception.value = '';
+            if (filterDateReceptionCustom) {
+                filterDateReceptionCustom.value = '';
+                filterDateReceptionCustom.classList.add('d-none');
+            }
             if (filterDateRetour) filterDateRetour.value = '';
+            if (filterDateRetourCustom) {
+                filterDateRetourCustom.value = '';
+                filterDateRetourCustom.classList.add('d-none');
+            }
             
             // Relancer le filtrage
             filterPVCards();
+            populateFilterDropdowns();
         });
     }
     
@@ -1478,7 +1638,7 @@ function initializePVSearch() {
  */
 function filterPVCards() {
     const searchInput = document.getElementById('pvSearchInput');
-    const filterStatus = document.getElementById('pvFilterStatus');
+    const filterLastSent = document.getElementById('pvFilterLastSent');
     const filterCompletion = document.getElementById('pvFilterCompletion');
     const filterChantier = document.getElementById('pvFilterChantier');
     const filterMaterielType = document.getElementById('pvFilterMaterielType');
@@ -1486,13 +1646,15 @@ function filterPVCards() {
     const filterFournisseur = document.getElementById('pvFilterFournisseur');
     const filterEmailConducteur = document.getElementById('pvFilterEmailConducteur');
     const filterDateReception = document.getElementById('pvFilterDateReception');
+    const filterDateReceptionCustom = document.getElementById('pvFilterDateReceptionCustom');
     const filterDateRetour = document.getElementById('pvFilterDateRetour');
+    const filterDateRetourCustom = document.getElementById('pvFilterDateRetourCustom');
     const cards = document.querySelectorAll('.pv-card');
     
-    if (!searchInput || !filterStatus) return;
+    if (!searchInput || !filterLastSent) return;
     
     const searchTerm = searchInput.value.toLowerCase();
-    const statusFilter = filterStatus.value;
+    const lastSentFilter = filterLastSent.value;
     const completionFilter = filterCompletion ? filterCompletion.value : '';
     const chantierFilter = filterChantier ? filterChantier.value.toLowerCase() : '';
     const materielTypeFilter = filterMaterielType ? filterMaterielType.value.toLowerCase() : '';
@@ -1502,20 +1664,49 @@ function filterPVCards() {
     const dateReceptionFilter = filterDateReception ? filterDateReception.value : '';
     const dateRetourFilter = filterDateRetour ? filterDateRetour.value : '';
     
+    // Calculer les dates de référence
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1)); // Lundi
+    const lastWeekStart = new Date(weekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    const lastWeekEnd = new Date(weekStart);
+    lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    
     let visibleCount = 0;
     
     cards.forEach(card => {
-        const statusBadge = card.querySelector('.pv-card-status');
-        const cardStatus = statusBadge.classList.contains('sent') ? 'sent' : 'draft';
-        
         // Récupérer le texte de recherche complet qui contient tous les formats
         const searchableText = card.dataset.searchText || '';
         
         // Vérifier la recherche textuelle
         const matchesSearch = !searchTerm || searchableText.includes(searchTerm);
         
-        // Vérifier le filtre de statut
-        const matchesStatus = !statusFilter || cardStatus === statusFilter;
+        // Vérifier le filtre de date d'envoi
+        let matchesLastSent = true;
+        if (lastSentFilter) {
+            const lastSentDate = card.dataset.lastSentDate;
+            if (lastSentFilter === 'never') {
+                matchesLastSent = !lastSentDate || lastSentDate === '';
+            } else if (lastSentDate) {
+                const sentDate = new Date(lastSentDate);
+                if (lastSentFilter === 'today') {
+                    matchesLastSent = sentDate >= today;
+                } else if (lastSentFilter === 'week') {
+                    matchesLastSent = sentDate >= weekStart;
+                } else if (lastSentFilter === 'month') {
+                    matchesLastSent = sentDate >= monthStart;
+                }
+            } else {
+                matchesLastSent = false;
+            }
+        }
         
         // Vérifier le filtre de complétion
         const matchesCompletion = !completionFilter || (card.dataset.completionStatus || 'empty') === completionFilter;
@@ -1536,13 +1727,63 @@ function filterPVCards() {
         const matchesEmailConducteur = !emailConducteurFilter || (card.dataset.emailConducteur || '').toLowerCase() === emailConducteurFilter;
         
         // Vérifier le filtre date réception
-        const matchesDateReception = !dateReceptionFilter || (card.dataset.dateReception || '') === dateReceptionFilter;
+        let matchesDateReception = true;
+        if (dateReceptionFilter) {
+            const cardDateReception = card.dataset.dateReception;
+            if (dateReceptionFilter === 'custom') {
+                // Utiliser la date personnalisée
+                const customDate = filterDateReceptionCustom?.value;
+                matchesDateReception = customDate && cardDateReception === customDate;
+            } else if (cardDateReception) {
+                const receptionDate = new Date(cardDateReception);
+                if (dateReceptionFilter === 'today') {
+                    matchesDateReception = receptionDate >= today && receptionDate < new Date(today.getTime() + 86400000);
+                } else if (dateReceptionFilter === 'yesterday') {
+                    matchesDateReception = receptionDate >= yesterday && receptionDate < today;
+                } else if (dateReceptionFilter === 'week') {
+                    matchesDateReception = receptionDate >= weekStart;
+                } else if (dateReceptionFilter === 'lastWeek') {
+                    matchesDateReception = receptionDate >= lastWeekStart && receptionDate <= lastWeekEnd;
+                } else if (dateReceptionFilter === 'month') {
+                    matchesDateReception = receptionDate >= monthStart;
+                } else if (dateReceptionFilter === 'lastMonth') {
+                    matchesDateReception = receptionDate >= lastMonthStart && receptionDate <= lastMonthEnd;
+                }
+            } else {
+                matchesDateReception = false;
+            }
+        }
         
         // Vérifier le filtre date retour
-        const matchesDateRetour = !dateRetourFilter || (card.dataset.dateRetour || '') === dateRetourFilter;
+        let matchesDateRetour = true;
+        if (dateRetourFilter) {
+            const cardDateRetour = card.dataset.dateRetour;
+            if (dateRetourFilter === 'custom') {
+                // Utiliser la date personnalisée
+                const customDate = filterDateRetourCustom?.value;
+                matchesDateRetour = customDate && cardDateRetour === customDate;
+            } else if (cardDateRetour) {
+                const retourDate = new Date(cardDateRetour);
+                if (dateRetourFilter === 'today') {
+                    matchesDateRetour = retourDate >= today && retourDate < new Date(today.getTime() + 86400000);
+                } else if (dateRetourFilter === 'yesterday') {
+                    matchesDateRetour = retourDate >= yesterday && retourDate < today;
+                } else if (dateRetourFilter === 'week') {
+                    matchesDateRetour = retourDate >= weekStart;
+                } else if (dateRetourFilter === 'lastWeek') {
+                    matchesDateRetour = retourDate >= lastWeekStart && retourDate <= lastWeekEnd;
+                } else if (dateRetourFilter === 'month') {
+                    matchesDateRetour = retourDate >= monthStart;
+                } else if (dateRetourFilter === 'lastMonth') {
+                    matchesDateRetour = retourDate >= lastMonthStart && retourDate <= lastMonthEnd;
+                }
+            } else {
+                matchesDateRetour = false;
+            }
+        }
         
         // Afficher ou masquer la carte
-        if (matchesSearch && matchesStatus && matchesCompletion && matchesChantier && matchesMaterielType && 
+        if (matchesSearch && matchesLastSent && matchesCompletion && matchesChantier && matchesMaterielType && 
             matchesResponsable && matchesFournisseur && matchesEmailConducteur && matchesDateReception && matchesDateRetour) {
             card.classList.remove('hidden');
             visibleCount++;
@@ -1552,7 +1793,261 @@ function filterPVCards() {
     });
     
     updateFilterCount(visibleCount);
+    updateActiveFiltersBadges();
     checkScrollableList();
+}
+
+/**
+ * Met à jour les puces de filtres actifs
+ */
+function updateActiveFiltersBadges() {
+    const container = document.getElementById('activeFiltersContainer');
+    const badgesContainer = document.getElementById('activeFiltersBadges');
+    
+    if (!container || !badgesContainer) return;
+    
+    const activeFilters = [];
+    
+    // Vérifier chaque filtre
+    const searchInput = document.getElementById('pvSearchInput');
+    const filterLastSent = document.getElementById('pvFilterLastSent');
+    const filterCompletion = document.getElementById('pvFilterCompletion');
+    const filterChantier = document.getElementById('pvFilterChantier');
+    const filterMaterielType = document.getElementById('pvFilterMaterielType');
+    const filterResponsable = document.getElementById('pvFilterResponsable');
+    const filterFournisseur = document.getElementById('pvFilterFournisseur');
+    const filterEmailConducteur = document.getElementById('pvFilterEmailConducteur');
+    const filterDateReception = document.getElementById('pvFilterDateReception');
+    const filterDateRetour = document.getElementById('pvFilterDateRetour');
+    
+    // Recherche textuelle
+    if (searchInput?.value) {
+        activeFilters.push({
+            label: 'Recherche',
+            value: searchInput.value,
+            icon: 'fa-search',
+            filterId: 'search'
+        });
+    }
+    
+    // Dernier envoi
+    if (filterLastSent?.value) {
+        const lastSentTexts = {
+            'today': 'Aujourd\'hui',
+            'week': 'Cette semaine',
+            'month': 'Ce mois',
+            'never': 'Jamais envoyé'
+        };
+        activeFilters.push({
+            label: 'Dernier envoi',
+            value: lastSentTexts[filterLastSent.value] || filterLastSent.value,
+            icon: 'fa-paper-plane',
+            filterId: 'lastSent'
+        });
+    }
+    
+    // Complétion
+    if (filterCompletion?.value) {
+        const completionTexts = {
+            'complete': 'Complet',
+            'reception_only': 'Réception',
+            'retour_only': 'Retour',
+            'empty': 'Non signé'
+        };
+        activeFilters.push({
+            label: 'Complétion',
+            value: completionTexts[filterCompletion.value] || filterCompletion.value,
+            icon: 'fa-tasks',
+            filterId: 'completion'
+        });
+    }
+    
+    // Chantier
+    if (filterChantier?.value) {
+        activeFilters.push({
+            label: 'Chantier',
+            value: filterChantier.value,
+            icon: 'fa-hard-hat',
+            filterId: 'chantier'
+        });
+    }
+    
+    // Type matériel
+    if (filterMaterielType?.value) {
+        activeFilters.push({
+            label: 'Type matériel',
+            value: filterMaterielType.value,
+            icon: 'fa-tools',
+            filterId: 'materielType'
+        });
+    }
+    
+    // Responsable
+    if (filterResponsable?.value) {
+        activeFilters.push({
+            label: 'Responsable',
+            value: filterResponsable.value,
+            icon: 'fa-user-tie',
+            filterId: 'responsable'
+        });
+    }
+    
+    // Fournisseur
+    if (filterFournisseur?.value) {
+        activeFilters.push({
+            label: 'Fournisseur',
+            value: filterFournisseur.value,
+            icon: 'fa-building',
+            filterId: 'fournisseur'
+        });
+    }
+    
+    // Email conducteur
+    if (filterEmailConducteur?.value) {
+        activeFilters.push({
+            label: 'Email',
+            value: filterEmailConducteur.value,
+            icon: 'fa-envelope',
+            filterId: 'emailConducteur'
+        });
+    }
+    
+    // Date réception
+    if (filterDateReception?.value) {
+        const filterDateReceptionCustom = document.getElementById('pvFilterDateReceptionCustom');
+        const periodTexts = {
+            'today': 'Aujourd\'hui',
+            'yesterday': 'Hier',
+            'week': 'Cette semaine',
+            'lastWeek': 'Semaine dernière',
+            'month': 'Ce mois',
+            'lastMonth': 'Mois dernier',
+            'custom': filterDateReceptionCustom?.value || 'Date précise'
+        };
+        activeFilters.push({
+            label: 'Date réception',
+            value: periodTexts[filterDateReception.value] || filterDateReception.value,
+            icon: 'fa-calendar-check',
+            filterId: 'dateReception'
+        });
+    }
+    
+    // Date retour
+    if (filterDateRetour?.value) {
+        const filterDateRetourCustom = document.getElementById('pvFilterDateRetourCustom');
+        const periodTexts = {
+            'today': 'Aujourd\'hui',
+            'yesterday': 'Hier',
+            'week': 'Cette semaine',
+            'lastWeek': 'Semaine dernière',
+            'month': 'Ce mois',
+            'lastMonth': 'Mois dernier',
+            'custom': filterDateRetourCustom?.value || 'Date précise'
+        };
+        activeFilters.push({
+            label: 'Date retour',
+            value: periodTexts[filterDateRetour.value] || filterDateRetour.value,
+            icon: 'fa-calendar-minus',
+            filterId: 'dateRetour'
+        });
+    }
+    
+    // Afficher ou masquer le conteneur
+    if (activeFilters.length > 0) {
+        container.style.display = 'block';
+        
+        // Créer les badges
+        badgesContainer.innerHTML = activeFilters.map(filter => `
+            <span class="badge bg-primary d-flex align-items-center gap-2" style="font-size: 0.875rem; padding: 0.5rem 0.75rem;">
+                <i class="fas ${filter.icon}"></i>
+                <span>${filter.value}</span>
+                <button type="button" class="btn-close btn-close-white" 
+                        style="font-size: 0.6rem; padding: 0; margin-left: 0.25rem;"
+                        onclick="clearFilter('${filter.filterId}')"
+                        title="Retirer ce filtre"></button>
+            </span>
+        `).join('');
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+/**
+ * Efface un filtre spécifique
+ */
+function clearFilter(filterId) {
+    let element;
+    
+    switch(filterId) {
+        case 'search':
+            element = document.getElementById('pvSearchInput');
+            if (element) element.value = '';
+            break;
+        case 'lastSent':
+            element = document.getElementById('pvFilterLastSent');
+            if (element) {
+                element.value = '';
+            }
+            break;
+        case 'completion':
+            element = document.getElementById('pvFilterCompletion');
+            if (element) {
+                element.value = '';
+            }
+            break;
+        case 'chantier':
+            element = document.getElementById('pvFilterChantier');
+            if (element) {
+                $(element).val('').trigger('change');
+            }
+            break;
+        case 'materielType':
+            element = document.getElementById('pvFilterMaterielType');
+            if (element) {
+                $(element).val('').trigger('change');
+            }
+            break;
+        case 'responsable':
+            element = document.getElementById('pvFilterResponsable');
+            if (element) {
+                $(element).val('').trigger('change');
+            }
+            break;
+        case 'fournisseur':
+            element = document.getElementById('pvFilterFournisseur');
+            if (element) {
+                $(element).val('').trigger('change');
+            }
+            break;
+        case 'emailConducteur':
+            element = document.getElementById('pvFilterEmailConducteur');
+            if (element) {
+                $(element).val('').trigger('change');
+            }
+            break;
+        case 'dateReception':
+            element = document.getElementById('pvFilterDateReception');
+            const customReception = document.getElementById('pvFilterDateReceptionCustom');
+            if (element) element.value = '';
+            if (customReception) {
+                customReception.value = '';
+                customReception.classList.add('d-none');
+            }
+            break;
+        case 'dateRetour':
+            element = document.getElementById('pvFilterDateRetour');
+            const customRetour = document.getElementById('pvFilterDateRetourCustom');
+            if (element) element.value = '';
+            if (customRetour) {
+                customRetour.value = '';
+                customRetour.classList.add('d-none');
+            }
+            break;
+    }
+    
+    // Re-filtrer et repeupler les dropdowns
+    filterPVCards();
+    populateFilterDropdowns();
 }
 
 /**
@@ -1561,7 +2056,7 @@ function filterPVCards() {
 function populateFilterDropdowns(pvs) {
     // Sauvegarder les valeurs actuellement sélectionnées
     const currentFilters = {
-        status: document.getElementById('pvFilterStatus')?.value || '',
+        lastSent: document.getElementById('pvFilterLastSent')?.value || '',
         completion: document.getElementById('pvFilterCompletion')?.value || '',
         chantier: document.getElementById('pvFilterChantier')?.value || '',
         materielType: document.getElementById('pvFilterMaterielType')?.value || '',
@@ -1572,11 +2067,43 @@ function populateFilterDropdowns(pvs) {
         dateRetour: document.getElementById('pvFilterDateRetour')?.value || ''
     };
     
+    // Calculer les dates de référence
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+    const lastWeekStart = new Date(weekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    const lastWeekEnd = new Date(weekStart);
+    lastWeekEnd.setDate(lastWeekEnd.getDate() - 1);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    
     // Filtrer les PV selon les filtres actifs
     let filteredPVs = allPVData.filter(pv => {
-        const matchesStatus = !currentFilters.status || 
-            (currentFilters.status === 'sent' && pv.status === 'sent') ||
-            (currentFilters.status === 'draft' && pv.status !== 'sent');
+        // Vérifier le filtre de date d'envoi
+        let matchesLastSent = true;
+        if (currentFilters.lastSent) {
+            const lastSentDate = pv.last_sent_date;
+            if (currentFilters.lastSent === 'never') {
+                matchesLastSent = !lastSentDate || lastSentDate === '';
+            } else if (lastSentDate) {
+                const sentDate = new Date(lastSentDate);
+                if (currentFilters.lastSent === 'today') {
+                    matchesLastSent = sentDate >= today;
+                } else if (currentFilters.lastSent === 'week') {
+                    matchesLastSent = sentDate >= weekStart;
+                } else if (currentFilters.lastSent === 'month') {
+                    matchesLastSent = sentDate >= monthStart;
+                }
+            } else {
+                matchesLastSent = false;
+            }
+        }
+        
         const matchesCompletion = !currentFilters.completion || 
             (pv.completion_status || 'empty') === currentFilters.completion;
         const matchesChantier = !currentFilters.chantier || 
@@ -1587,14 +2114,71 @@ function populateFilterDropdowns(pvs) {
             (pv.responsable || '').trim() === currentFilters.responsable;
         const matchesFournisseur = !currentFilters.fournisseur || 
             (pv.fournisseur || '').trim() === currentFilters.fournisseur;
-        const matchesEmailConducteur = !currentFilters.emailConducteur || 
-            (pv.email_conducteur || '').trim() === currentFilters.emailConducteur;
-        const matchesDateReception = !currentFilters.dateReception || 
-            (pv.date_reception || '') === currentFilters.dateReception;
-        const matchesDateRetour = !currentFilters.dateRetour || 
-            (pv.date_retour || '') === currentFilters.dateRetour;
+        const matchesEmailConducteur = !currentFilters.emailConducteur || (() => {
+            // Gérer le cas où email_conducteur est un tableau
+            if (Array.isArray(pv.email_conducteur)) {
+                return pv.email_conducteur.some(email => 
+                    email && email.trim() === currentFilters.emailConducteur
+                );
+            }
+            return (pv.email_conducteur || '').trim() === currentFilters.emailConducteur;
+        })();
         
-        return matchesStatus && matchesCompletion && matchesChantier && matchesMaterielType &&
+        // Vérifier le filtre date réception avec périodes
+        let matchesDateReception = true;
+        if (currentFilters.dateReception) {
+            const dateReception = pv.date_reception;
+            if (currentFilters.dateReception === 'custom') {
+                const customDate = document.getElementById('pvFilterDateReceptionCustom')?.value;
+                matchesDateReception = customDate && dateReception === customDate;
+            } else if (dateReception) {
+                const recDate = new Date(dateReception);
+                if (currentFilters.dateReception === 'today') {
+                    matchesDateReception = recDate >= today && recDate < new Date(today.getTime() + 86400000);
+                } else if (currentFilters.dateReception === 'yesterday') {
+                    matchesDateReception = recDate >= yesterday && recDate < today;
+                } else if (currentFilters.dateReception === 'week') {
+                    matchesDateReception = recDate >= weekStart;
+                } else if (currentFilters.dateReception === 'lastWeek') {
+                    matchesDateReception = recDate >= lastWeekStart && recDate <= lastWeekEnd;
+                } else if (currentFilters.dateReception === 'month') {
+                    matchesDateReception = recDate >= monthStart;
+                } else if (currentFilters.dateReception === 'lastMonth') {
+                    matchesDateReception = recDate >= lastMonthStart && recDate <= lastMonthEnd;
+                }
+            } else {
+                matchesDateReception = false;
+            }
+        }
+        
+        // Vérifier le filtre date retour avec périodes
+        let matchesDateRetour = true;
+        if (currentFilters.dateRetour) {
+            const dateRetour = pv.date_retour;
+            if (currentFilters.dateRetour === 'custom') {
+                const customDate = document.getElementById('pvFilterDateRetourCustom')?.value;
+                matchesDateRetour = customDate && dateRetour === customDate;
+            } else if (dateRetour) {
+                const retDate = new Date(dateRetour);
+                if (currentFilters.dateRetour === 'today') {
+                    matchesDateRetour = retDate >= today && retDate < new Date(today.getTime() + 86400000);
+                } else if (currentFilters.dateRetour === 'yesterday') {
+                    matchesDateRetour = retDate >= yesterday && retDate < today;
+                } else if (currentFilters.dateRetour === 'week') {
+                    matchesDateRetour = retDate >= weekStart;
+                } else if (currentFilters.dateRetour === 'lastWeek') {
+                    matchesDateRetour = retDate >= lastWeekStart && retDate <= lastWeekEnd;
+                } else if (currentFilters.dateRetour === 'month') {
+                    matchesDateRetour = retDate >= monthStart;
+                } else if (currentFilters.dateRetour === 'lastMonth') {
+                    matchesDateRetour = retDate >= lastMonthStart && retDate <= lastMonthEnd;
+                }
+            } else {
+                matchesDateRetour = false;
+            }
+        }
+        
+        return matchesLastSent && matchesCompletion && matchesChantier && matchesMaterielType &&
             matchesResponsable && matchesFournisseur && matchesEmailConducteur &&
             matchesDateReception && matchesDateRetour;
     });
@@ -1604,8 +2188,6 @@ function populateFilterDropdowns(pvs) {
     const responsableSet = new Set();
     const fournisseurSet = new Set();
     const emailConducteurSet = new Set();
-    
-    console.log('🔍 Population des filtres avec', filteredPVs.length, 'PV (sur', allPVData.length, 'total)');
     
     filteredPVs.forEach(pv => {
         if (pv.chantier && pv.chantier.trim()) {
@@ -1620,16 +2202,16 @@ function populateFilterDropdowns(pvs) {
         if (pv.fournisseur && pv.fournisseur.trim()) {
             fournisseurSet.add(pv.fournisseur.trim());
         }
-        if (pv.email_conducteur && pv.email_conducteur.trim()) {
-            emailConducteurSet.add(pv.email_conducteur.trim());
+        // Gérer email_conducteur qui peut être un tableau ou une string
+        if (pv.email_conducteur) {
+            const emails = Array.isArray(pv.email_conducteur) ? pv.email_conducteur : [pv.email_conducteur];
+            emails.forEach(email => {
+                if (email && typeof email === 'string' && email.trim()) {
+                    emailConducteurSet.add(email.trim());
+                }
+            });
         }
     });
-    
-    console.log('🏗️ Chantiers trouvés:', Array.from(chantierSet));
-    console.log('🔧 Types matériel trouvés:', Array.from(materielTypeSet));
-    console.log('👤 Responsables trouvés:', Array.from(responsableSet));
-    console.log('🚚 Fournisseurs trouvés:', Array.from(fournisseurSet));
-    console.log('✉️ Emails conducteur trouvés:', Array.from(emailConducteurSet));
     
     // Peupler le dropdown chantier
     const chantierSelect = document.getElementById('pvFilterChantier');
@@ -1646,7 +2228,6 @@ function populateFilterDropdowns(pvs) {
         if (currentValue && chantierSet.has(currentValue)) {
             chantierSelect.value = currentValue;
         }
-        console.log('✅ Dropdown chantier peuplé avec', chantierSet.size, 'valeurs');
     }
     
     // Peupler le dropdown type matériel
@@ -1663,7 +2244,6 @@ function populateFilterDropdowns(pvs) {
         if (currentValue && materielTypeSet.has(currentValue)) {
             materielTypeSelect.value = currentValue;
         }
-        console.log('✅ Dropdown type matériel peuplé avec', materielTypeSet.size, 'valeurs');
     }
     
     // Peupler le dropdown responsable
@@ -1680,7 +2260,6 @@ function populateFilterDropdowns(pvs) {
         if (currentValue && responsableSet.has(currentValue)) {
             responsableSelect.value = currentValue;
         }
-        console.log('✅ Dropdown responsable peuplé avec', responsableSet.size, 'valeurs');
     }
     
     // Peupler le dropdown fournisseur
@@ -1697,7 +2276,6 @@ function populateFilterDropdowns(pvs) {
         if (currentValue && fournisseurSet.has(currentValue)) {
             fournisseurSelect.value = currentValue;
         }
-        console.log('✅ Dropdown fournisseur peuplé avec', fournisseurSet.size, 'valeurs');
     }
     
     // Peupler le dropdown email conducteur
@@ -1714,7 +2292,6 @@ function populateFilterDropdowns(pvs) {
         if (currentValue && emailConducteurSet.has(currentValue)) {
             emailConducteurSelect.value = currentValue;
         }
-        console.log('✅ Dropdown email conducteur peuplé avec', emailConducteurSet.size, 'valeurs');
     }
 }
 
@@ -1735,8 +2312,10 @@ function updateFilterCount(count) {
 
 /**
  * Charge un PV par son ID
+ * @param {string} pvId - L'ID du PV à charger
+ * @param {boolean} silent - Si true, ne pas afficher de notification
  */
-async function loadPVById(pvId) {
+async function loadPVById(pvId, silent = false) {
     if (!pvId) return;
     
     try {
@@ -1776,6 +2355,9 @@ async function loadPVById(pvId) {
             currentPVId = pvData.id;
             pvStatus = pvData.status || 'draft';
             
+            // Stocker les données du PV pour y accéder dans updatePVStatusBadge
+            window.currentPVData = pvData;
+            
             // Remplir le formulaire avec les nouvelles données
             populateForm(pvData.form_data);
             
@@ -1786,13 +2368,12 @@ async function loadPVById(pvId) {
             document.getElementById('pvId').value = currentPVId;
             updatePVStatusBadge();
             
-            showNotification('success', `PV "${pvData.chantier}" chargé avec succès`);
+            if (!silent) {
+                showNotification('success', `PV "${pvData.chantier}" chargé avec succès`);
+            }
             
             // Mettre à jour la sélection visuelle
             await loadSavedPVList();
-            
-            // Scroller en haut
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
             showNotification('danger', data.message);
         }
@@ -1849,8 +2430,8 @@ async function downloadPVById(pvId) {
     if (!pvId) return;
     
     try {
-        // Charger le PV d'abord
-        await loadPVById(pvId);
+        // Charger le PV d'abord (silencieusement)
+        await loadPVById(pvId, true);
         
         // Attendre un peu pour s'assurer que le formulaire est bien rempli
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -1870,8 +2451,8 @@ async function sendPVById(pvId) {
     if (!pvId) return;
     
     try {
-        // Charger le PV d'abord
-        await loadPVById(pvId);
+        // Charger le PV d'abord (silencieusement)
+        await loadPVById(pvId, true);
         
         // Attendre un peu pour s'assurer que le formulaire est bien rempli
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -1895,12 +2476,12 @@ async function sendPVById(pvId) {
             
             // Validation
             const chantier = formData.get('chantier');
-            const emailConducteur = formData.get('email_conducteur');
+            const emailConducteurs = formData.getAll('email_conducteur').filter(e => e.trim());
             const hasReceptionSignature = signaturePadReception && !signaturePadReception.isEmpty();
             const hasRetourSignature = signaturePadRetour && !signaturePadRetour.isEmpty();
             
-            if (!chantier || !emailConducteur) {
-                showNotification('warning', 'Veuillez remplir le chantier et l\'email conducteur avant d\'envoyer');
+            if (!chantier || emailConducteurs.length === 0) {
+                showNotification('warning', 'Veuillez remplir le chantier et au moins un email destinataire avant d\'envoyer');
                 return;
             }
             
@@ -1960,10 +2541,6 @@ async function savePVDraft(eventOrSilent) {
         
         // Récupérer toutes les données du formulaire
         const formData = gatherFormData();
-        console.log('FormData being saved:', formData);
-        console.log('Email conducteur:', formData.email_conducteur);
-        console.log('Responsable:', formData.responsable);
-        console.log('Fournisseur:', formData.fournisseur);
         
         // Ajouter l'ID actuel si existant
         if (currentPVId) {
@@ -2179,6 +2756,10 @@ function gatherFormData() {
                 }
             } else if (input.type === 'checkbox') {
                 formData[input.name] = input.checked ? input.value : '';
+            } else if (input.multiple && input.tagName === 'SELECT') {
+                // Pour les selects multiples, récupérer toutes les valeurs sélectionnées
+                const selectedOptions = Array.from(input.selectedOptions).map(opt => opt.value);
+                formData[input.name] = selectedOptions;
             } else {
                 formData[input.name] = input.value;
             }
@@ -2234,13 +2815,26 @@ function populateForm(formData) {
             // Utiliser jQuery pour définir la valeur dans Select2
             const $element = $(`#${key}`);
             if ($element.length) {
-                // Créer l'option si elle n'existe pas déjà
-                if ($element.find(`option[value="${value}"]`).length === 0 && value) {
-                    const newOption = new Option(value, value, true, true);
-                    $element.append(newOption);
+                // Gérer les selects multiples
+                if ($element.prop('multiple')) {
+                    const values = Array.isArray(value) ? value : [value];
+                    // Créer les options si elles n'existent pas
+                    values.forEach(val => {
+                        if (val && $element.find(`option[value="${val}"]`).length === 0) {
+                            const newOption = new Option(val, val, true, true);
+                            $element.append(newOption);
+                        }
+                    });
+                    // Définir les valeurs et déclencher le changement
+                    $element.val(values).trigger('change');
+                } else {
+                    // Select simple
+                    if ($element.find(`option[value="${value}"]`).length === 0 && value) {
+                        const newOption = new Option(value, value, true, true);
+                        $element.append(newOption);
+                    }
+                    $element.val(value).trigger('change');
                 }
-                // Définir la valeur et déclencher le changement
-                $element.val(value).trigger('change');
             }
             return;
         }
@@ -2278,8 +2872,6 @@ function populateForm(formData) {
         formData[key].startsWith('data:image/')
     );
     
-    console.log('Photos trouvées à restaurer:', allPhotoKeys.length);
-    
     // Regrouper les photos par conteneur
     const photosByContainer = {};
     allPhotoKeys.forEach(photoKey => {
@@ -2302,8 +2894,6 @@ function populateForm(formData) {
             photosByContainer[fieldName].push(photoKey);
         }
     });
-    
-    console.log('Photos regroupées par conteneur:', Object.keys(photosByContainer));
     
     // Insérer les photos dans leurs conteneurs respectifs
     Object.keys(photosByContainer).forEach(fieldName => {
@@ -2336,9 +2926,6 @@ function populateForm(formData) {
                     multiPhotoContainer.appendChild(photoItem);
                 }
             });
-            console.log(`${photoKeys.length} photo(s) restaurée(s) dans ${containerId}`);
-        } else {
-            console.warn(`Conteneur ${containerId} introuvable pour le champ ${fieldName}`);
         }
     });
     
@@ -2374,6 +2961,14 @@ function createNewPV() {
     
     // Réinitialiser le formulaire
     document.getElementById('pvForm').reset();
+    
+    // Réinitialiser tous les champs Select2
+    $('#chantier').val('').trigger('change');
+    $('#email_conducteur').val('').trigger('change');
+    $('#materiel_numero').val('').trigger('change');
+    $('#materiel_type').val('').trigger('change');
+    $('#fournisseur').val('').trigger('change');
+    $('#responsable').val('').trigger('change');
     
     // Effacer les signatures
     if (signaturePadReception) signaturePadReception.clear();
@@ -2426,46 +3021,249 @@ function createNewPV() {
 }
 
 /**
- * Met à jour le badge de statut du PV
+ * Met à jour l'indicateur de PV actuel avec les détails
  */
 function updatePVStatusBadge() {
-    const statusAlert = document.querySelector('.alert-info');
-    if (!statusAlert) return;
+    const indicator = document.getElementById('currentPVIndicator');
+    if (!indicator) return;
+    
+    const statusDiv = indicator.querySelector('.pv-indicator-status');
+    const detailsDiv = indicator.querySelector('.pv-indicator-details');
+    const iconDiv = indicator.querySelector('.pv-indicator-icon i');
     
     if (pvStatus === 'new') {
-        statusAlert.className = 'alert alert-info mb-3';
-        statusAlert.innerHTML = '<i class="fas fa-info-circle"></i> <strong>Nouveau PV en cours</strong> - Le formulaire est vide et prêt à être rempli';
+        indicator.className = 'current-pv-indicator alert alert-info d-flex align-items-center';
+        iconDiv.className = 'fas fa-file-alt fs-3';
+        statusDiv.innerHTML = '<strong><i class="fas fa-plus-circle me-2"></i>Nouveau PV en cours</strong>';
+        detailsDiv.innerHTML = '<span class="text-muted small">Le formulaire est vide et prêt à être rempli</span>';
     } else if (pvStatus === 'draft') {
-        statusAlert.className = 'alert alert-warning mb-3';
-        statusAlert.innerHTML = '<i class="fas fa-edit"></i> <strong>PV chargé</strong> - Vous pouvez modifier ce PV et l\'envoyer par email';
+        indicator.className = 'current-pv-indicator alert alert-warning d-flex align-items-center';
+        iconDiv.className = 'fas fa-edit fs-3';
+        
+        // Récupérer les informations du formulaire
+        const chantier = document.getElementById('chantier')?.value || '';
+        const emailConducteur = document.getElementById('email_conducteur')?.value || '';
+        const emailEntreprise = document.getElementById('email_entreprise')?.value || '';
+        const materielType = document.getElementById('materiel_type')?.value || '';
+        const materielNumero = document.getElementById('materiel_numero')?.value || '';
+        const pvType = document.querySelector('input[name="pv_type"]:checked')?.value || 'reception';
+        
+        // Vérifier les signatures pour le type de PV actuel
+        const signatureReception = signaturePadReception && !signaturePadReception.isEmpty();
+        const signatureRetour = signaturePadRetour && !signaturePadRetour.isEmpty();
+        
+        // ===== CHAMPS CRITIQUES (bloquants) =====
+        let missingCritical = [];
+        if (!chantier) missingCritical.push('Chantier');
+        if (!emailConducteur) missingCritical.push('Email destinataire');
+        if (!emailEntreprise) missingCritical.push('Email entreprise');
+        if (!materielType) missingCritical.push('Type matériel');
+        if (!materielNumero) missingCritical.push('N° matériel');
+        
+        // Vérifier la signature selon le type de PV
+        if (pvType === 'reception' && !signatureReception) {
+            missingCritical.push('Signature réception');
+        }
+        if (pvType === 'retour' && !signatureRetour) {
+            missingCritical.push('Signature retour');
+        }
+        
+        // ===== CHAMPS RECOMMANDÉS (inspection) =====
+        let missingInspection = [];
+        const suffix = pvType === 'reception' ? '_reception' : '_retour';
+        
+        // Vérifier l'inspection visuelle
+        const carrosserie = document.querySelector(`input[name="carrosserie${suffix}"]:checked`);
+        const eclairage = document.querySelector(`input[name="eclairage${suffix}"]:checked`);
+        const pneumatiques = document.querySelector(`input[name="pneumatiques${suffix}"]:checked`);
+        const panier = document.querySelector(`input[name="panier${suffix}"]:checked`);
+        const flexibles = document.querySelector(`input[name="flexibles${suffix}"]:checked`);
+        
+        if (!carrosserie) missingInspection.push('Carrosserie');
+        if (!eclairage) missingInspection.push('Éclairage');
+        if (!pneumatiques) missingInspection.push('Pneumatiques');
+        if (!panier) missingInspection.push('Panier');
+        if (!flexibles) missingInspection.push('Flexibles');
+        
+        // Vérifier les fluides (carburant et fuites)
+        const carburant = document.getElementById(`carburant${suffix}`)?.value;
+        const fuiteMoteur = document.querySelector(`input[name="fuite_moteur${suffix}"]:checked`);
+        const fuiteHydraulique = document.querySelector(`input[name="fuite_hydraulique${suffix}"]:checked`);
+        const fuiteGasoil = document.querySelector(`input[name="fuite_gasoil${suffix}"]:checked`);
+        
+        if (!carburant || carburant === '0') missingInspection.push('Carburant');
+        if (!fuiteMoteur) missingInspection.push('Fuite moteur');
+        if (!fuiteHydraulique) missingInspection.push('Fuite hydraulique');
+        if (!fuiteGasoil) missingInspection.push('Fuite gasoil');
+        
+        // Récupérer la date d'envoi depuis les données chargées
+        const lastSentDate = currentPVId ? (window.currentPVData?.last_sent_date || null) : null;
+        
+        const typeLabel = pvType === 'reception' ? 'Réception' : 'Retour';
+        const chantierDisplay = chantier || 'Non renseigné';
+        
+        // ===== BADGE CRITIQUE (bloquant) =====
+        let criticalBadge = '';
+        if (missingCritical.length === 0) {
+            criticalBadge = '<span class="badge bg-success ms-2"><i class="fas fa-check-double me-1"></i>Prêt à envoyer</span>';
+        } else {
+            const missingText = missingCritical.join(', ');
+            const badgeClass = missingCritical.length <= 2 ? 'bg-warning text-dark' : 'bg-danger';
+            criticalBadge = `<span class="badge ${badgeClass} ms-2"><i class="fas fa-exclamation-triangle me-1"></i>Manquant: ${missingText}</span>`;
+        }
+        
+        // ===== BADGE INSPECTION (recommandé) =====
+        let inspectionBadge = '';
+        if (missingInspection.length > 0) {
+            const inspectionText = missingInspection.join(', ');
+            inspectionBadge = `<span class="badge bg-info ms-2"><i class="fas fa-clipboard-check me-1"></i>Inspection: ${inspectionText}</span>`;
+        }
+        
+        // ===== BADGE SIGNATURE =====
+        let signatureBadge = '';
+        if (missingCritical.length === 0) { // Afficher seulement si les champs critiques sont OK
+            if (pvType === 'reception') {
+                signatureBadge = signatureReception ? 
+                    '<span class="badge bg-success ms-2"><i class="fas fa-check-circle me-1"></i>Signé</span>' : '';
+            } else {
+                signatureBadge = signatureRetour ? 
+                    '<span class="badge bg-success ms-2"><i class="fas fa-check-circle me-1"></i>Signé</span>' : '';
+            }
+        }
+        
+        const sentInfo = lastSentDate ? 
+            `<span class="badge bg-info ms-2"><i class="fas fa-paper-plane me-1"></i>Envoyé le ${formatDateTimeFr(lastSentDate)}</span>` : 
+            '';
+        
+        statusDiv.innerHTML = `<strong><i class="fas fa-file-signature me-2"></i>PV ${typeLabel} - ${chantierDisplay}</strong>`;
+        detailsDiv.innerHTML = `
+            <div class="d-flex align-items-center gap-1 flex-wrap">
+                ${criticalBadge}
+                ${signatureBadge}
+                ${inspectionBadge}
+                ${sentInfo}
+            </div>
+        `;
     }
+}
+
+/**
+ * Formate une date ISO en format français
+ */
+function formatDateFr(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+/**
+ * Formate une date ISO en format français avec heure
+ */
+function formatDateTimeFr(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('fr-FR', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 /**
  * Affiche une notification
  */
-function showNotification(type, message) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-    alertDiv.role = 'alert';
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+/**
+ * Affiche une notification avec barre de progression
+ */
+function showNotification(type, message, duration = 5000) {
+    // Créer le conteneur de notification fixe s'il n'existe pas
+    let container = document.getElementById('notificationContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notificationContainer';
+        container.className = 'notification-container';
+        document.body.appendChild(container);
+    }
+    
+    // Créer la notification
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    // Icône selon le type
+    let icon = '';
+    switch(type) {
+        case 'success':
+            icon = '<i class="fas fa-check-circle"></i>';
+            break;
+        case 'danger':
+        case 'error':
+            icon = '<i class="fas fa-exclamation-circle"></i>';
+            break;
+        case 'warning':
+            icon = '<i class="fas fa-exclamation-triangle"></i>';
+            break;
+        case 'info':
+            icon = '<i class="fas fa-info-circle"></i>';
+            break;
+    }
+    
+    notification.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-icon">${icon}</div>
+            <div class="notification-message">${message}</div>
+            <button type="button" class="notification-close" aria-label="Fermer">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="notification-progress">
+            <div class="notification-progress-bar"></div>
+        </div>
     `;
     
-    // Insérer au début du main
-    const main = document.querySelector('main.container');
-    if (main) {
-        main.insertBefore(alertDiv, main.firstChild);
-        
-        // Auto-dismiss après 5 secondes
+    // Ajouter au conteneur
+    container.appendChild(notification);
+    
+    // Animation d'entrée
+    setTimeout(() => notification.classList.add('show'), 10);
+    
+    // Bouton de fermeture
+    const closeBtn = notification.querySelector('.notification-close');
+    const progressBar = notification.querySelector('.notification-progress-bar');
+    
+    let startTime = Date.now();
+    let animationFrame;
+    
+    // Fonction pour fermer la notification
+    const closeNotification = () => {
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+        notification.classList.remove('show');
         setTimeout(() => {
-            alertDiv.remove();
-        }, 5000);
+            notification.remove();
+            // Supprimer le conteneur s'il est vide
+            if (container.children.length === 0) {
+                container.remove();
+            }
+        }, 300);
+    };
+    
+    closeBtn.addEventListener('click', closeNotification);
+    
+    // Animation de la barre de progression
+    const animateProgress = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        progressBar.style.width = (100 - progress * 100) + '%';
         
-        // Scroller vers le haut
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+        if (progress < 1) {
+            animationFrame = requestAnimationFrame(animateProgress);
+        } else {
+            closeNotification();
+        }
+    };
+    
+    animateProgress();
 }
 
 
@@ -2763,10 +3561,14 @@ function initializeSelect2Fields() {
  * Initialise un seul champ Select2
  */
 function initSingleSelect2Field($field, fieldId, fieldData) {
+    // Vérifier si c'est un champ multiple
+    const isMultiple = $field.prop('multiple');
+    
     // Initialiser Select2 avec la fonction tags et template personnalisé
     $field.select2({
         theme: 'bootstrap-5',
         tags: true,
+        multiple: isMultiple,
         placeholder: `Sélectionnez ou tapez ${$field.prev('label').text().replace('*', '').trim()}`,
         allowClear: !$field.prop('required'),
         width: '100%',
@@ -2786,10 +3588,19 @@ function initSingleSelect2Field($field, fieldId, fieldData) {
                 return data.text;
             }
             
+            // Vérifier si l'option est actuellement sélectionnée
+            const currentValues = $field.val() || [];
+            const isSelected = Array.isArray(currentValues) ? currentValues.includes(data.id) : currentValues === data.id;
+            
             // Créer l'élément avec un bouton de suppression
             const $result = $('<span class="select2-result-item"></span>');
             const $text = $('<span class="select2-result-text"></span>').text(data.text);
             const $deleteBtn = $('<button class="select2-delete-btn" type="button" title="Supprimer"><i class="fas fa-times"></i></button>');
+            
+            // Ajouter une classe si l'option est sélectionnée
+            if (isSelected) {
+                $result.addClass('select2-result-selected');
+            }
             
             // Utiliser mousedown pour intercepter avant le clic de Select2
             $deleteBtn.on('mousedown', function(e) {
@@ -2855,14 +3666,51 @@ function initSingleSelect2Field($field, fieldId, fieldData) {
     // Sauvegarder dans l'historique quand la valeur change
     $field.off('change.history').on('change.history', function() {
         const value = $(this).val();
-        if (value && value.trim()) {
-            saveToFieldHistory(fieldId, value.trim());
+        if (value) {
+            // Gérer les selects multiples
+            if (Array.isArray(value)) {
+                value.forEach(v => {
+                    if (v && v.trim && v.trim()) {
+                        saveToFieldHistory(fieldId, v.trim());
+                    }
+                });
+            } else if (value.trim && value.trim()) {
+                saveToFieldHistory(fieldId, value.trim());
+            }
         }
     });
     
     // Déclencher une auto-sauvegarde immédiate après changement Select2
-    $field.off('select2:select').on('select2:select', function() {
+    $field.off('select2:select').on('select2:select', function(e) {
         performAutoSave();
+        // Fermer et rouvrir pour rafraîchir les styles
+        if (isMultiple) {
+            const wasOpen = $field.data('select2').isOpen();
+            if (wasOpen) {
+                setTimeout(() => {
+                    $field.select2('close');
+                    setTimeout(() => {
+                        $field.select2('open');
+                    }, 50);
+                }, 10);
+            }
+        }
+    });
+    
+    $field.off('select2:unselect').on('select2:unselect', function(e) {
+        performAutoSave();
+        // Fermer et rouvrir pour rafraîchir les styles
+        if (isMultiple) {
+            const wasOpen = $field.data('select2').isOpen();
+            if (wasOpen) {
+                setTimeout(() => {
+                    $field.select2('close');
+                    setTimeout(() => {
+                        $field.select2('open');
+                    }, 50);
+                }, 10);
+            }
+        }
     });
     
     $field.off('select2:clear').on('select2:clear', function() {
