@@ -10,6 +10,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>PV Matériel Loué - France Montage Briand</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icone.png') }}">
+    
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
@@ -122,7 +125,7 @@
                                     <i class="fas fa-search"></i>
                                 </span>
                                 <input type="text" class="form-control form-control-lg" id="pvSearchInput" 
-                                       placeholder="Rechercher par chantier, email conducteur, email entreprise, matériel, type, responsable, fournisseur..."
+                                       placeholder="Rechercher... (Appuyez sur Entrée pour cumuler les filtres)"
                                        style="border-left: none;">
                             </div>
                             <button type="button" class="btn btn-outline-primary btn-lg" id="toggleFiltersBtn">
@@ -147,31 +150,23 @@
                                 <label class="form-label small text-muted mb-1">
                                     <i class="fas fa-paper-plane me-1"></i>Dernier envoi
                                 </label>
-                                <select class="form-select" id="pvFilterLastSent">
+                                <select class="form-select select2-filter" id="pvFilterLastSent" style="width: 100%;">
                                     <option value="">Toutes dates</option>
-                                    <option value="today">Aujourd'hui</option>
-                                    <option value="week">Cette semaine</option>
-                                    <option value="month">Ce mois</option>
-                                    <option value="never">Jamais envoyé</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small text-muted mb-1">
                                     <i class="fas fa-tasks me-1"></i>Complétion
                                 </label>
-                                <select class="form-select" id="pvFilterCompletion">
+                                <select class="form-select select2-filter" id="pvFilterCompletion" style="width: 100%;">
                                     <option value="">Tous états</option>
-                                    <option value="complete">Complet (Réception + Retour)</option>
-                                    <option value="reception_only">Réception seulement</option>
-                                    <option value="retour_only">Retour seulement</option>
-                                    <option value="empty">Non signé</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small text-muted mb-1">
                                     <i class="fas fa-hard-hat me-1"></i>Chantier
                                 </label>
-                                <select class="form-select" id="pvFilterChantier">
+                                <select class="form-select select2-filter" id="pvFilterChantier" style="width: 100%;">
                                     <option value="">Tous chantiers</option>
                                 </select>
                             </div>
@@ -179,7 +174,7 @@
                                 <label class="form-label small text-muted mb-1">
                                     <i class="fas fa-tools me-1"></i>Type matériel
                                 </label>
-                                <select class="form-select" id="pvFilterMaterielType">
+                                <select class="form-select select2-filter" id="pvFilterMaterielType" style="width: 100%;">
                                     <option value="">Tous types</option>
                                 </select>
                             </div>
@@ -190,7 +185,7 @@
                                 <label class="form-label small text-muted mb-1">
                                     <i class="fas fa-user-tie me-1"></i>Responsable
                                 </label>
-                                <select class="form-select" id="pvFilterResponsable">
+                                <select class="form-select select2-filter" id="pvFilterResponsable" style="width: 100%;">
                                     <option value="">Tous responsables</option>
                                 </select>
                             </div>
@@ -198,7 +193,7 @@
                                 <label class="form-label small text-muted mb-1">
                                     <i class="fas fa-building me-1"></i>Fournisseur
                                 </label>
-                                <select class="form-select" id="pvFilterFournisseur">
+                                <select class="form-select select2-filter" id="pvFilterFournisseur" style="width: 100%;">
                                     <option value="">Tous fournisseurs</option>
                                 </select>
                             </div>
@@ -206,7 +201,7 @@
                                 <label class="form-label small text-muted mb-1">
                                     <i class="fas fa-envelope me-1"></i>Email conducteur
                                 </label>
-                                <select class="form-select" id="pvFilterEmailConducteur">
+                                <select class="form-select select2-filter" id="pvFilterEmailConducteur" style="width: 100%;">
                                     <option value="">Tous emails conducteur</option>
                                 </select>
                             </div>
@@ -214,15 +209,8 @@
                                 <label class="form-label small text-muted mb-1">
                                     <i class="fas fa-calendar-check me-1"></i>Date réception
                                 </label>
-                                <select class="form-select" id="pvFilterDateReception">
+                                <select class="form-select select2-filter" id="pvFilterDateReception" style="width: 100%;">
                                     <option value="">Toutes dates</option>
-                                    <option value="today">Aujourd'hui</option>
-                                    <option value="yesterday">Hier</option>
-                                    <option value="week">Cette semaine</option>
-                                    <option value="lastWeek">Semaine dernière</option>
-                                    <option value="month">Ce mois</option>
-                                    <option value="lastMonth">Mois dernier</option>
-                                    <option value="custom">Date précise...</option>
                                 </select>
                                 <input type="date" class="form-control mt-1 d-none" id="pvFilterDateReceptionCustom">
                             </div>
@@ -233,15 +221,8 @@
                                 <label class="form-label small text-muted mb-1">
                                     <i class="fas fa-calendar-minus me-1"></i>Date retour
                                 </label>
-                                <select class="form-select" id="pvFilterDateRetour">
+                                <select class="form-select select2-filter" id="pvFilterDateRetour" style="width: 100%;">
                                     <option value="">Toutes dates</option>
-                                    <option value="today">Aujourd'hui</option>
-                                    <option value="yesterday">Hier</option>
-                                    <option value="week">Cette semaine</option>
-                                    <option value="lastWeek">Semaine dernière</option>
-                                    <option value="month">Ce mois</option>
-                                    <option value="lastMonth">Mois dernier</option>
-                                    <option value="custom">Date précise...</option>
                                 </select>
                                 <input type="date" class="form-control mt-1 d-none" id="pvFilterDateRetourCustom">
                             </div>
@@ -279,6 +260,24 @@
                 </select>
                 
                 <div class="d-none" id="pvStatusBadge"></div>
+            </div>
+        </div>
+
+        <!-- Section: Email Entreprise Global -->
+        <div class="card mb-4 border-info">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-building"></i> Email Entreprise (global)
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <label for="global_email_entreprise" class="form-label">Email entreprise <span class="text-danger">*</span></label>
+                        <select class="form-select select2-field" id="global_email_entreprise" name="global_email_entreprise" required style="width: 100%;">
+                            <option value=""></option>
+                        </select>
+                        <small class="text-muted">Tous les PV seront automatiquement envoyés en copie à cette adresse. Cette valeur sera pré-remplie pour chaque nouveau PV.</small>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -421,16 +420,32 @@
                             <thead>
                                 <tr>
                                     <th>Élément</th>
-                                    <th class="text-center">Réception</th>
-                                    <th class="text-center">Photos Réception <i class="fas fa-camera"></i></th>
-                                    <th class="text-center">Retour</th>
-                                    <th class="text-center">Photos Retour <i class="fas fa-camera"></i></th>
+                                    <th class="text-center reception-column">Réception</th>
+                                    <th class="text-center retour-column">Retour</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>Carrosserie / Rétroviseurs</td>
                                     <td>
+                                        <div class="element-cell">
+                                            <div class="element-title">Carrosserie / Rétroviseurs</div>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary add-photo-btn mt-2" 
+                                                    data-field="carrosserie" 
+                                                    onclick="openPhotoModal('carrosserie')">
+                                                <i class="fas fa-plus"></i> Photo <i class="fas fa-camera"></i>
+                                            </button>
+                                            <div class="photo-preview-container mt-2" id="photos_preview_carrosserie"></div>
+                                            <div style="display: none;">
+                                                <div class="multi-photo-container" id="photos_carrosserie_reception">
+                                                    <input type="file" class="form-control form-control-sm photo-upload" name="photo_carrosserie_reception" accept="image/*" data-container="photos_carrosserie_reception" data-field="carrosserie_reception" multiple>
+                                                </div>
+                                                <div class="multi-photo-container" id="photos_carrosserie_retour">
+                                                    <input type="file" class="form-control form-control-sm photo-upload" name="photo_carrosserie_retour" accept="image/*" data-container="photos_carrosserie_retour" data-field="carrosserie_retour" multiple>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="reception-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="carrosserie_reception" id="carrosserie_reception_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="carrosserie_reception_bon">Bon</label>
@@ -439,14 +454,7 @@
                                             <label class="btn btn-outline-danger btn-sm" for="carrosserie_reception_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_carrosserie_reception">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_carrosserie_reception" accept="image/*" data-container="photos_carrosserie_reception" data-field="carrosserie_reception" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
+                                    <td class="retour-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="carrosserie_retour" id="carrosserie_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="carrosserie_retour_bon">Bon</label>
@@ -455,18 +463,29 @@
                                             <label class="btn btn-outline-danger btn-sm" for="carrosserie_retour_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_carrosserie_retour">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_carrosserie_retour" accept="image/*" data-container="photos_carrosserie_retour" data-field="carrosserie_retour" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
                                 </tr>
                                 
                                 <tr>
-                                    <td>Éclairage / Gyrophare</td>
                                     <td>
+                                        <div class="element-cell">
+                                            <div class="element-title">Éclairage / Gyrophare</div>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary add-photo-btn mt-2" 
+                                                    data-field="eclairage" 
+                                                    onclick="openPhotoModal('eclairage')">
+                                                <i class="fas fa-plus"></i> Photo <i class="fas fa-camera"></i>
+                                            </button>
+                                            <div class="photo-preview-container mt-2" id="photos_preview_eclairage"></div>
+                                            <div style="display: none;">
+                                                <div class="multi-photo-container" id="photos_eclairage_reception">
+                                                    <input type="file" class="form-control form-control-sm photo-upload" name="photo_eclairage_reception" accept="image/*" data-container="photos_eclairage_reception" data-field="eclairage_reception" multiple>
+                                                </div>
+                                                <div class="multi-photo-container" id="photos_eclairage_retour">
+                                                    <input type="file" class="form-control form-control-sm photo-upload" name="photo_eclairage_retour" accept="image/*" data-container="photos_eclairage_retour" data-field="eclairage_retour" multiple>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="reception-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="eclairage_reception" id="eclairage_reception_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="eclairage_reception_bon">Bon</label>
@@ -475,14 +494,7 @@
                                             <label class="btn btn-outline-danger btn-sm" for="eclairage_reception_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_eclairage_reception">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_eclairage_reception" accept="image/*" data-container="photos_eclairage_reception" data-field="eclairage_reception" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
+                                    <td class="retour-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="eclairage_retour" id="eclairage_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="eclairage_retour_bon">Bon</label>
@@ -491,18 +503,28 @@
                                             <label class="btn btn-outline-danger btn-sm" for="eclairage_retour_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_eclairage_retour">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_eclairage_retour" accept="image/*" data-container="photos_eclairage_retour" data-field="eclairage_retour" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
                                 </tr>
                                 
                                 <tr>
-                                    <td>Pneumatiques</td>
-                                    <td>
+                                    <td class="element-cell">
+                                        <div class="element-title">Pneumatiques</div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary add-photo-btn mt-2" 
+                                                onclick="openPhotoModal('pneumatiques')">
+                                            <i class="fas fa-camera"></i> + Photo
+                                        </button>
+                                        <div class="photo-preview-container" id="preview_pneumatiques"></div>
+                                        <div style="display: none;">
+                                            <input type="file" id="photo_pneumatiques_reception" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_pneumatiques_reception" accept="image/*" 
+                                                   data-container="photos_pneumatiques_reception" data-field="pneumatiques_reception" multiple>
+                                            <div class="multi-photo-container" id="photos_pneumatiques_reception"></div>
+                                            <input type="file" id="photo_pneumatiques_retour" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_pneumatiques_retour" accept="image/*" 
+                                                   data-container="photos_pneumatiques_retour" data-field="pneumatiques_retour" multiple>
+                                            <div class="multi-photo-container" id="photos_pneumatiques_retour"></div>
+                                        </div>
+                                    </td>
+                                    <td class="reception-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="pneumatiques_reception" id="pneumatiques_reception_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="pneumatiques_reception_bon">Bon</label>
@@ -511,14 +533,7 @@
                                             <label class="btn btn-outline-danger btn-sm" for="pneumatiques_reception_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_pneumatiques_reception">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_pneumatiques_reception" accept="image/*" data-container="photos_pneumatiques_reception" data-field="pneumatiques_reception" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
+                                    <td class="retour-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="pneumatiques_retour" id="pneumatiques_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="pneumatiques_retour_bon">Bon</label>
@@ -527,18 +542,28 @@
                                             <label class="btn btn-outline-danger btn-sm" for="pneumatiques_retour_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_pneumatiques_retour">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_pneumatiques_retour" accept="image/*" data-container="photos_pneumatiques_retour" data-field="pneumatiques_retour" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
                                 </tr>
                                 
                                 <tr>
-                                    <td>Panier (si applicable)</td>
-                                    <td>
+                                    <td class="element-cell">
+                                        <div class="element-title">Panier (si applicable)</div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary add-photo-btn mt-2" 
+                                                onclick="openPhotoModal('panier')">
+                                            <i class="fas fa-camera"></i> + Photo
+                                        </button>
+                                        <div class="photo-preview-container" id="preview_panier"></div>
+                                        <div style="display: none;">
+                                            <input type="file" id="photo_panier_reception" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_panier_reception" accept="image/*" 
+                                                   data-container="photos_panier_reception" data-field="panier_reception" multiple>
+                                            <div class="multi-photo-container" id="photos_panier_reception"></div>
+                                            <input type="file" id="photo_panier_retour" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_panier_retour" accept="image/*" 
+                                                   data-container="photos_panier_retour" data-field="panier_retour" multiple>
+                                            <div class="multi-photo-container" id="photos_panier_retour"></div>
+                                        </div>
+                                    </td>
+                                    <td class="reception-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="panier_reception" id="panier_reception_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="panier_reception_bon">Bon</label>
@@ -547,14 +572,7 @@
                                             <label class="btn btn-outline-danger btn-sm" for="panier_reception_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_panier_reception">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_panier_reception" accept="image/*" data-container="photos_panier_reception" data-field="panier_reception" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
+                                    <td class="retour-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="panier_retour" id="panier_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="panier_retour_bon">Bon</label>
@@ -563,18 +581,28 @@
                                             <label class="btn btn-outline-danger btn-sm" for="panier_retour_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_panier_retour">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_panier_retour" accept="image/*" data-container="photos_panier_retour" data-field="panier_retour" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
                                 </tr>
                                 
                                 <tr>
-                                    <td>Flexibles, faisceaux électrique</td>
-                                    <td>
+                                    <td class="element-cell">
+                                        <div class="element-title">Flexibles, faisceaux électrique</div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary add-photo-btn mt-2" 
+                                                onclick="openPhotoModal('flexibles')">
+                                            <i class="fas fa-camera"></i> + Photo
+                                        </button>
+                                        <div class="photo-preview-container" id="preview_flexibles"></div>
+                                        <div style="display: none;">
+                                            <input type="file" id="photo_flexibles_reception" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_flexibles_reception" accept="image/*" 
+                                                   data-container="photos_flexibles_reception" data-field="flexibles_reception" multiple>
+                                            <div class="multi-photo-container" id="photos_flexibles_reception"></div>
+                                            <input type="file" id="photo_flexibles_retour" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_flexibles_retour" accept="image/*" 
+                                                   data-container="photos_flexibles_retour" data-field="flexibles_retour" multiple>
+                                            <div class="multi-photo-container" id="photos_flexibles_retour"></div>
+                                        </div>
+                                    </td>
+                                    <td class="reception-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="flexibles_reception" id="flexibles_reception_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="flexibles_reception_bon">Bon</label>
@@ -583,14 +611,7 @@
                                             <label class="btn btn-outline-danger btn-sm" for="flexibles_reception_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_flexibles_reception">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_flexibles_reception" accept="image/*" data-container="photos_flexibles_reception" data-field="flexibles_reception" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
+                                    <td class="retour-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="flexibles_retour" id="flexibles_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="flexibles_retour_bon">Bon</label>
@@ -599,18 +620,28 @@
                                             <label class="btn btn-outline-danger btn-sm" for="flexibles_retour_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_flexibles_retour">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_flexibles_retour" accept="image/*" data-container="photos_flexibles_retour" data-field="flexibles_retour" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
                                 </tr>
                                 
                                 <tr>
-                                    <td>Commandes</td>
-                                    <td>
+                                    <td class="element-cell">
+                                        <div class="element-title">Commandes</div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary add-photo-btn mt-2" 
+                                                onclick="openPhotoModal('commandes')">
+                                            <i class="fas fa-camera"></i> + Photo
+                                        </button>
+                                        <div class="photo-preview-container" id="preview_commandes"></div>
+                                        <div style="display: none;">
+                                            <input type="file" id="photo_commandes_reception" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_commandes_reception" accept="image/*" 
+                                                   data-container="photos_commandes_reception" data-field="commandes_reception" multiple>
+                                            <div class="multi-photo-container" id="photos_commandes_reception"></div>
+                                            <input type="file" id="photo_commandes_retour" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_commandes_retour" accept="image/*" 
+                                                   data-container="photos_commandes_retour" data-field="commandes_retour" multiple>
+                                            <div class="multi-photo-container" id="photos_commandes_retour"></div>
+                                        </div>
+                                    </td>
+                                    <td class="reception-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="commandes_reception" id="commandes_reception_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="commandes_reception_bon">Bon</label>
@@ -619,27 +650,13 @@
                                             <label class="btn btn-outline-danger btn-sm" for="commandes_reception_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_commandes_reception">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_commandes_reception" accept="image/*" data-container="photos_commandes_reception" data-field="commandes_reception" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
+                                    <td class="retour-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="commandes_retour" id="commandes_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="commandes_retour_bon">Bon</label>
                                             
                                             <input type="radio" class="btn-check" name="commandes_retour" id="commandes_retour_defectueux" value="defectueux">
                                             <label class="btn btn-outline-danger btn-sm" for="commandes_retour_defectueux">Défectueux</label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_commandes_retour">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_commandes_retour" accept="image/*" data-container="photos_commandes_retour" data-field="commandes_retour" multiple>
-                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -661,16 +678,31 @@
                             <thead>
                                 <tr>
                                     <th>Élément</th>
-                                    <th class="text-center">Réception</th>
-                                    <th class="text-center">Photos Réception <i class="fas fa-camera"></i></th>
-                                    <th class="text-center">Retour</th>
-                                    <th class="text-center">Photos Retour <i class="fas fa-camera"></i></th>
+                                    <th class="text-center reception-column">Réception</th>
+                                    <th class="text-center retour-column">Retour</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>Conformité réglementaire</td>
-                                    <td>
+                                    <td class="element-cell">
+                                        <div class="element-title">Conformité réglementaire</div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary add-photo-btn mt-2" 
+                                                onclick="openPhotoModal('conformite')">
+                                            <i class="fas fa-camera"></i> + Photo
+                                        </button>
+                                        <div class="photo-preview-container" id="preview_conformite"></div>
+                                        <div style="display: none;">
+                                            <input type="file" id="photo_conformite_reception" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_conformite_reception" accept="image/*" 
+                                                   data-container="photos_conformite_reception" data-field="conformite_reception" multiple>
+                                            <div class="multi-photo-container" id="photos_conformite_reception"></div>
+                                            <input type="file" id="photo_conformite_retour" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_conformite_retour" accept="image/*" 
+                                                   data-container="photos_conformite_retour" data-field="conformite_retour" multiple>
+                                            <div class="multi-photo-container" id="photos_conformite_retour"></div>
+                                        </div>
+                                    </td>
+                                    <td class="reception-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="conformite_reception" id="conformite_reception_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="conformite_reception_bon">Bon</label>
@@ -679,14 +711,7 @@
                                             <label class="btn btn-outline-danger btn-sm" for="conformite_reception_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_conformite_reception">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_conformite_reception" accept="image/*" data-container="photos_conformite_reception" data-field="conformite_reception" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
+                                    <td class="retour-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="conformite_retour" id="conformite_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="conformite_retour_bon">Bon</label>
@@ -695,18 +720,28 @@
                                             <label class="btn btn-outline-danger btn-sm" for="conformite_retour_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_conformite_retour">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_conformite_retour" accept="image/*" data-container="photos_conformite_retour" data-field="conformite_retour" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
                                 </tr>
                                 
                                 <tr>
-                                    <td>Essais de mobilités</td>
-                                    <td>
+                                    <td class="element-cell">
+                                        <div class="element-title">Essais de mobilités</div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary add-photo-btn mt-2" 
+                                                onclick="openPhotoModal('mobilites')">
+                                            <i class="fas fa-camera"></i> + Photo
+                                        </button>
+                                        <div class="photo-preview-container" id="preview_mobilites"></div>
+                                        <div style="display: none;">
+                                            <input type="file" id="photo_mobilites_reception" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_mobilites_reception" accept="image/*" 
+                                                   data-container="photos_mobilites_reception" data-field="mobilites_reception" multiple>
+                                            <div class="multi-photo-container" id="photos_mobilites_reception"></div>
+                                            <input type="file" id="photo_mobilites_retour" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_mobilites_retour" accept="image/*" 
+                                                   data-container="photos_mobilites_retour" data-field="mobilites_retour" multiple>
+                                            <div class="multi-photo-container" id="photos_mobilites_retour"></div>
+                                        </div>
+                                    </td>
+                                    <td class="reception-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="mobilites_reception" id="mobilites_reception_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="mobilites_reception_bon">Bon</label>
@@ -715,14 +750,7 @@
                                             <label class="btn btn-outline-danger btn-sm" for="mobilites_reception_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_mobilites_reception">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_mobilites_reception" accept="image/*" data-container="photos_mobilites_reception" data-field="mobilites_reception" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
+                                    <td class="retour-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="mobilites_retour" id="mobilites_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="mobilites_retour_bon">Bon</label>
@@ -731,18 +759,28 @@
                                             <label class="btn btn-outline-danger btn-sm" for="mobilites_retour_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_mobilites_retour">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_mobilites_retour" accept="image/*" data-container="photos_mobilites_retour" data-field="mobilites_retour" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
                                 </tr>
                                 
                                 <tr>
-                                    <td>Essais de nacelles</td>
-                                    <td>
+                                    <td class="element-cell">
+                                        <div class="element-title">Essais de nacelles</div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary add-photo-btn mt-2" 
+                                                onclick="openPhotoModal('nacelles')">
+                                            <i class="fas fa-camera"></i> + Photo
+                                        </button>
+                                        <div class="photo-preview-container" id="preview_nacelles"></div>
+                                        <div style="display: none;">
+                                            <input type="file" id="photo_nacelles_reception" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_nacelles_reception" accept="image/*" 
+                                                   data-container="photos_nacelles_reception" data-field="nacelles_reception" multiple>
+                                            <div class="multi-photo-container" id="photos_nacelles_reception"></div>
+                                            <input type="file" id="photo_nacelles_retour" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_nacelles_retour" accept="image/*" 
+                                                   data-container="photos_nacelles_retour" data-field="nacelles_retour" multiple>
+                                            <div class="multi-photo-container" id="photos_nacelles_retour"></div>
+                                        </div>
+                                    </td>
+                                    <td class="reception-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="nacelles_reception" id="nacelles_reception_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="nacelles_reception_bon">Bon</label>
@@ -751,14 +789,7 @@
                                             <label class="btn btn-outline-danger btn-sm" for="nacelles_reception_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_nacelles_reception">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_nacelles_reception" accept="image/*" data-container="photos_nacelles_reception" data-field="nacelles_reception" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
+                                    <td class="retour-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="nacelles_retour" id="nacelles_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="nacelles_retour_bon">Bon</label>
@@ -767,18 +798,28 @@
                                             <label class="btn btn-outline-danger btn-sm" for="nacelles_retour_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_nacelles_retour">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_nacelles_retour" accept="image/*" data-container="photos_nacelles_retour" data-field="nacelles_retour" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
                                 </tr>
                                 
                                 <tr>
-                                    <td>Dispositifs de sécurité</td>
-                                    <td>
+                                    <td class="element-cell">
+                                        <div class="element-title">Dispositifs de sécurité</div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary add-photo-btn mt-2" 
+                                                onclick="openPhotoModal('securite')">
+                                            <i class="fas fa-camera"></i> + Photo
+                                        </button>
+                                        <div class="photo-preview-container" id="preview_securite"></div>
+                                        <div style="display: none;">
+                                            <input type="file" id="photo_securite_reception" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_securite_reception" accept="image/*" 
+                                                   data-container="photos_securite_reception" data-field="securite_reception" multiple>
+                                            <div class="multi-photo-container" id="photos_securite_reception"></div>
+                                            <input type="file" id="photo_securite_retour" class="form-control form-control-sm photo-upload" 
+                                                   name="photo_securite_retour" accept="image/*" 
+                                                   data-container="photos_securite_retour" data-field="securite_retour" multiple>
+                                            <div class="multi-photo-container" id="photos_securite_retour"></div>
+                                        </div>
+                                    </td>
+                                    <td class="reception-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="securite_reception" id="securite_reception_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="securite_reception_bon">Bon</label>
@@ -787,27 +828,13 @@
                                             <label class="btn btn-outline-danger btn-sm" for="securite_reception_defectueux">Défectueux</label>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_securite_reception">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_securite_reception" accept="image/*" data-container="photos_securite_reception" data-field="securite_reception" multiple>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
+                                    <td class="retour-column">
                                         <div class="btn-group w-100" role="group">
                                             <input type="radio" class="btn-check" name="securite_retour" id="securite_retour_bon" value="bon">
                                             <label class="btn btn-outline-success btn-sm" for="securite_retour_bon">Bon</label>
                                             
                                             <input type="radio" class="btn-check" name="securite_retour" id="securite_retour_defectueux" value="defectueux">
                                             <label class="btn btn-outline-danger btn-sm" for="securite_retour_defectueux">Défectueux</label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="photo-cell-wrapper">
-                                            <div class="multi-photo-container" id="photos_securite_retour">
-                                                <input type="file" class="form-control form-control-sm photo-upload" name="photo_securite_retour" accept="image/*" data-container="photos_securite_retour" data-field="securite_retour" multiple>
-                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -841,13 +868,15 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label class="form-label"><i class="fas fa-camera"></i> Photo du carburant (Réception)</label>
-                                <div class="photo-cell-wrapper">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelector('#photos_carburant_reception input').click()">
+                                    <i class="fas fa-camera"></i> + Photo
+                                </button>
+                                <div class="photo-cell-wrapper" style="margin-top: 0.5rem;">
                                     <div class="multi-photo-container" id="photos_carburant_reception">
-                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_carburant_reception" accept="image/*" data-container="photos_carburant_reception" data-field="carburant_reception" multiple>
+                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_carburant_reception" accept="image/*" data-container="photos_carburant_reception" data-field="carburant_reception" multiple style="display: none;">
                                     </div>
                                 </div>
-                                <small class="text-muted">Photo de la jauge de carburant</small>
+                                <small class="text-muted d-block mt-1">Photo de la jauge de carburant</small>
                             </div>
                             
                             <div class="mb-3">
@@ -888,13 +917,15 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label class="form-label"><i class="fas fa-camera"></i> Photo des fuites (Réception)</label>
-                                <div class="photo-cell-wrapper">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelector('#photos_fuite_reception input').click()">
+                                    <i class="fas fa-camera"></i> + Photo
+                                </button>
+                                <div class="photo-cell-wrapper" style="margin-top: 0.5rem;">
                                     <div class="multi-photo-container" id="photos_fuite_reception">
-                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_fuite_reception" accept="image/*" data-container="photos_fuite_reception" data-field="fuite_reception" multiple>
+                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_fuite_reception" accept="image/*" data-container="photos_fuite_reception" data-field="fuite_reception" multiple style="display: none;">
                                     </div>
                                 </div>
-                                <small class="text-muted">Ajoutez une photo si vous constatez des fuites</small>
+                                <small class="text-muted d-block mt-1">Ajoutez une photo si vous constatez des fuites</small>
                             </div>
                         </div>
                         
@@ -914,13 +945,15 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label class="form-label"><i class="fas fa-camera"></i> Photo du carburant (Retour)</label>
-                                <div class="photo-cell-wrapper">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelector('#photos_carburant_retour input').click()">
+                                    <i class="fas fa-camera"></i> + Photo
+                                </button>
+                                <div class="photo-cell-wrapper" style="margin-top: 0.5rem;">
                                     <div class="multi-photo-container" id="photos_carburant_retour">
-                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_carburant_retour" accept="image/*" data-container="photos_carburant_retour" data-field="carburant_retour" multiple>
+                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_carburant_retour" accept="image/*" data-container="photos_carburant_retour" data-field="carburant_retour" multiple style="display: none;">
                                     </div>
                                 </div>
-                                <small class="text-muted">Photo de la jauge de carburant</small>
+                                <small class="text-muted d-block mt-1">Photo de la jauge de carburant</small>
                             </div>
                             
                             <div class="mb-3">
@@ -961,12 +994,16 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label class="form-label"><i class="fas fa-camera"></i> Photo des fuites (Retour)</label>
-                                <div class="photo-cell-wrapper">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelector('#photos_fuite_retour input').click()">
+                                    <i class="fas fa-camera"></i> + Photo
+                                </button>
+                                <div class="photo-cell-wrapper" style="margin-top: 0.5rem;">
                                     <div class="multi-photo-container" id="photos_fuite_retour">
-                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_fuite_retour" accept="image/*" data-container="photos_fuite_retour" data-field="fuite_retour" multiple>
+                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_fuite_retour" accept="image/*" data-container="photos_fuite_retour" data-field="fuite_retour" multiple style="display: none;">
                                     </div>
                                 </div>
+                                <small class="text-muted d-block mt-1">Ajoutez une photo si vous constatez des fuites</small>
+                            </div>
                                 <small class="text-muted">Ajoutez une photo si vous constatez des fuites</small>
                             </div>
                         </div>
@@ -987,13 +1024,15 @@
                             <textarea class="form-control" id="observations_reception" name="observations_reception" rows="4"></textarea>
                             
                             <div class="mb-3">
-                                <label class="form-label"><i class="fas fa-camera"></i> Photos d'observation (Réception)</label>
-                                <div class="photo-cell-wrapper">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelector('#photos_observation_reception input').click()">
+                                    <i class="fas fa-camera"></i> + Photo
+                                </button>
+                                <div class="photo-cell-wrapper" style="margin-top: 0.5rem;">
                                     <div class="multi-photo-container" id="photos_observation_reception">
-                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_observation_reception" accept="image/*" data-container="photos_observation_reception" data-field="observation_reception" multiple>
+                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_observation_reception" accept="image/*" data-container="photos_observation_reception" data-field="observation_reception" multiple style="display: none;">
                                     </div>
                                 </div>
-                                <small class="text-muted">Ajoutez des photos pour illustrer vos observations</small>
+                                <small class="text-muted d-block mt-1">Ajoutez des photos pour illustrer vos observations</small>
                             </div>
                         </div>
                         <div class="col-md-6 mb-3 pv-retour-col">
@@ -1001,13 +1040,15 @@
                             <textarea class="form-control" id="observations_retour" name="observations_retour" rows="4"></textarea>
                             
                             <div class="mb-3">
-                                <label class="form-label"><i class="fas fa-camera"></i> Photos d'observation (Retour)</label>
-                                <div class="photo-cell-wrapper">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelector('#photos_observation_retour input').click()">
+                                    <i class="fas fa-camera"></i> + Photo
+                                </button>
+                                <div class="photo-cell-wrapper" style="margin-top: 0.5rem;">
                                     <div class="multi-photo-container" id="photos_observation_retour">
-                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_observation_retour" accept="image/*" data-container="photos_observation_retour" data-field="observation_retour" multiple>
+                                        <input type="file" class="form-control form-control-sm photo-upload" name="photo_observation_retour" accept="image/*" data-container="photos_observation_retour" data-field="observation_retour" multiple style="display: none;">
                                     </div>
                                 </div>
-                                <small class="text-muted">Ajoutez des photos pour illustrer vos observations</small>
+                                <small class="text-muted d-block mt-1">Ajoutez des photos pour illustrer vos observations</small>
                             </div>
                         </div>
                     </div>

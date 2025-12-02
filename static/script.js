@@ -116,51 +116,24 @@ function togglePVColumns(type) {
         }
     });
     
-    // Sélectionner tous les tableaux d'inspection
-    const tables = document.querySelectorAll('.inspection-table');
-    
-    tables.forEach(table => {
-        const headers = table.querySelectorAll('thead th');
-        const rows = table.querySelectorAll('tbody tr');
-        
-        if (type === 'reception') {
-            // Afficher colonnes Réception (index 1 et 2), masquer Retour (index 3 et 4)
-            if (headers.length >= 5) {
-                headers[1].style.display = '';
-                headers[2].style.display = '';
-                headers[3].style.display = 'none';
-                headers[4].style.display = 'none';
-            }
-            
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length >= 5) {
-                    cells[1].style.display = '';
-                    cells[2].style.display = '';
-                    cells[3].style.display = 'none';
-                    cells[4].style.display = 'none';
-                }
-            });
-        } else {
-            // Masquer colonnes Réception, afficher Retour
-            if (headers.length >= 5) {
-                headers[1].style.display = 'none';
-                headers[2].style.display = 'none';
-                headers[3].style.display = '';
-                headers[4].style.display = '';
-            }
-            
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length >= 5) {
-                    cells[1].style.display = 'none';
-                    cells[2].style.display = 'none';
-                    cells[3].style.display = '';
-                    cells[4].style.display = '';
-                }
-            });
-        }
-    });
+    // Gérer l'affichage des colonnes avec les classes CSS
+    if (type === 'reception') {
+        // Afficher colonnes Réception, masquer colonnes Retour
+        document.querySelectorAll('.reception-column').forEach(el => {
+            el.style.display = '';
+        });
+        document.querySelectorAll('.retour-column').forEach(el => {
+            el.style.display = 'none';
+        });
+    } else {
+        // Masquer colonnes Réception, afficher colonnes Retour
+        document.querySelectorAll('.reception-column').forEach(el => {
+            el.style.display = 'none';
+        });
+        document.querySelectorAll('.retour-column').forEach(el => {
+            el.style.display = '';
+        });
+    }
     
     // Gérer les sections Date/Compteur et Signatures
     const receptionSections = document.querySelectorAll('[class*="reception"], .col-md-6:has(#date_reception)');
@@ -197,9 +170,25 @@ function togglePVColumns(type) {
     if (type === 'reception') {
         if (signatureReceptionCol) signatureReceptionCol.style.display = '';
         if (signatureRetourCol) signatureRetourCol.style.display = 'none';
+        
+        // Redimensionner le canvas de réception après affichage
+        setTimeout(() => {
+            const canvasReception = document.getElementById('signatureReception');
+            if (canvasReception && signaturePadReception) {
+                resizeCanvas(canvasReception, signaturePadReception);
+            }
+        }, 50);
     } else {
         if (signatureReceptionCol) signatureReceptionCol.style.display = 'none';
         if (signatureRetourCol) signatureRetourCol.style.display = '';
+        
+        // Redimensionner le canvas de retour après affichage
+        setTimeout(() => {
+            const canvasRetour = document.getElementById('signatureRetour');
+            if (canvasRetour && signaturePadRetour) {
+                resizeCanvas(canvasRetour, signaturePadRetour);
+            }
+        }, 50);
     }
 }
 
@@ -373,9 +362,11 @@ function initializeSignaturePads() {
         signaturePadReception = new SignaturePad(canvasReception, {
             backgroundColor: 'rgb(255, 255, 255)',
             penColor: 'rgb(0, 0, 0)',
-            minWidth: 1.5,
+            minWidth: 0.5,
             maxWidth: 2.5,
-            velocityFilterWeight: 0.7
+            velocityFilterWeight: 0.7,
+            throttle: 0,
+            minDistance: 0
         });
         
         resizeCanvas(canvasReception, signaturePadReception);
@@ -384,15 +375,22 @@ function initializeSignaturePads() {
         signaturePadReception.addEventListener('endStroke', () => {
             scheduleAutoSave();
         });
+        
+        // Forcer le rendu immédiat sur touch
+        canvasReception.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+        }, { passive: false });
     }
     
     if (canvasRetour) {
         signaturePadRetour = new SignaturePad(canvasRetour, {
             backgroundColor: 'rgb(255, 255, 255)',
             penColor: 'rgb(0, 0, 0)',
-            minWidth: 1.5,
+            minWidth: 0.5,
             maxWidth: 2.5,
-            velocityFilterWeight: 0.7
+            velocityFilterWeight: 0.7,
+            throttle: 0,
+            minDistance: 0
         });
         
         resizeCanvas(canvasRetour, signaturePadRetour);
@@ -401,16 +399,25 @@ function initializeSignaturePads() {
         signaturePadRetour.addEventListener('endStroke', () => {
             scheduleAutoSave();
         });
+        
+        // Forcer le rendu immédiat sur touch
+        canvasRetour.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+        }, { passive: false });
     }
     
-    // Redimensionner les canvas lors du resize de la fenêtre
+    // Redimensionner les canvas lors du resize de la fenêtre (debounced)
+    let resizeTimeout;
     window.addEventListener('resize', function() {
-        if (canvasReception) {
-            resizeCanvas(canvasReception, signaturePadReception);
-        }
-        if (canvasRetour) {
-            resizeCanvas(canvasRetour, signaturePadRetour);
-        }
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            if (canvasReception && signaturePadReception) {
+                resizeCanvas(canvasReception, signaturePadReception);
+            }
+            if (canvasRetour && signaturePadRetour) {
+                resizeCanvas(canvasRetour, signaturePadRetour);
+            }
+        }, 100);
     });
 }
 
@@ -431,22 +438,29 @@ function resizeCanvas(canvas, signaturePad) {
     // Sauvegarder les données actuelles si elles existent
     const data = signaturePad.isEmpty() ? null : signaturePad.toData();
     
-    // Redimensionner le canvas physique en utilisant la largeur du parent
-    canvas.width = parentWidth * ratio;
-    canvas.height = 150 * ratio; // Hauteur fixe appropriée
-    
-    // Définir la largeur CSS pour qu'elle corresponde
-    canvas.style.width = parentWidth + 'px';
+    // Définir d'abord les dimensions CSS
+    canvas.style.width = '100%';
     canvas.style.height = '150px';
     
-    // Mettre à l'échelle le contexte
-    canvas.getContext('2d').scale(ratio, ratio);
+    // Ensuite définir les dimensions du canvas en tenant compte du ratio
+    canvas.width = parentWidth * ratio;
+    canvas.height = 150 * ratio;
+    
+    // Mettre à l'échelle le contexte pour le devicePixelRatio
+    const ctx = canvas.getContext('2d');
+    ctx.scale(ratio, ratio);
     
     // Restaurer les données
     if (data) {
         signaturePad.fromData(data);
     } else {
         signaturePad.clear();
+    }
+    
+    // Force un repaint
+    signaturePad.clear();
+    if (data) {
+        signaturePad.fromData(data);
     }
 }
 
@@ -888,6 +902,13 @@ function handlePhotoUpload(input) {
                 // Insérer avant l'input file
                 container.insertBefore(photoItem, input);
                 
+                // Mettre à jour l'aperçu dans la colonne Élément
+                const fieldName = input.dataset.field?.replace('_reception', '').replace('_retour', '');
+                const pvType = input.dataset.field?.includes('_reception') ? 'reception' : 'retour';
+                if (fieldName) {
+                    updatePhotoPreview(fieldName, pvType);
+                }
+                
                 // Auto-sauvegarde après ajout de photo
                 scheduleAutoSave();
             };
@@ -916,7 +937,26 @@ function handlePhotoUpload(input) {
 function removePhotoItem(button) {
     const photoItem = button.closest('.photo-item');
     if (photoItem) {
+        // Extraire le fieldName avant de supprimer
+        const container = photoItem.closest('.multi-photo-container');
+        const containerId = container?.id;
+        let fieldName, pvType;
+        
+        if (containerId) {
+            const match = containerId.match(/photos_(\w+)_(reception|retour)/);
+            if (match) {
+                fieldName = match[1];
+                pvType = match[2];
+            }
+        }
+        
         photoItem.remove();
+        
+        // Mettre à jour l'aperçu dans la colonne Élément
+        if (fieldName) {
+            updatePhotoPreview(fieldName, pvType);
+        }
+        
         // Auto-sauvegarde après suppression de photo
         scheduleAutoSave();
     }
@@ -1438,6 +1478,65 @@ function attachPVCardEvents() {
 /**
  * Initialise la recherche et le filtrage des PV
  */
+// Tableau pour stocker les filtres de recherche cumulés
+let activeSearchFilters = [];
+
+// Mappings pour convertir les labels affichés en valeurs internes
+const filterMappings = {
+    lastSent: {
+        "Aujourd'hui": "today",
+        "Cette semaine": "week",
+        "Ce mois": "month",
+        "Jamais envoyé": "never"
+    },
+    completion: {
+        "Complet (Réception + Retour)": "complete",
+        "Réception seulement": "reception_only",
+        "Retour seulement": "retour_only",
+        "Non signé": "empty"
+    },
+    dateReception: {
+        "Aujourd'hui": "today",
+        "Hier": "yesterday",
+        "Cette semaine": "week",
+        "Semaine dernière": "lastWeek",
+        "Ce mois": "month",
+        "Mois dernier": "lastMonth",
+        "Date précise...": "custom"
+    },
+    dateRetour: {
+        "Aujourd'hui": "today",
+        "Hier": "yesterday",
+        "Cette semaine": "week",
+        "Semaine dernière": "lastWeek",
+        "Ce mois": "month",
+        "Mois dernier": "lastMonth",
+        "Date précise...": "custom"
+    }
+};
+
+// Fonction pour obtenir la valeur interne à partir du label
+function getFilterValue(filterType, displayValue) {
+    if (!displayValue || displayValue.trim() === '') return '';
+    
+    // Enlever le compteur entre parenthèses si présent
+    const cleanValue = displayValue.replace(/\s*\(\d+\)\s*$/, '').trim();
+    
+    const mapping = filterMappings[filterType];
+    return mapping && mapping[cleanValue] ? mapping[cleanValue] : cleanValue;
+}
+
+// Fonction pour obtenir le label à partir de la valeur interne
+function getFilterLabel(filterType, internalValue) {
+    if (!internalValue) return '';
+    const mapping = filterMappings[filterType];
+    if (!mapping) return internalValue;
+    for (const [label, value] of Object.entries(mapping)) {
+        if (value === internalValue) return label;
+    }
+    return internalValue;
+}
+
 function initializePVSearch() {
     const searchInput = document.getElementById('pvSearchInput');
     const filterLastSent = document.getElementById('pvFilterLastSent');
@@ -1458,54 +1557,77 @@ function initializePVSearch() {
     const searchSection = document.getElementById('pvSearchSection');
     const listContainer = document.getElementById('pvListContainer');
     
+    // Initialiser Select2 sur tous les filtres
+    $('.select2-filter').select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Sélectionnez...',
+        allowClear: true,
+        width: '100%'
+    });
+    
     if (searchInput) {
+        // Filtrer en temps réel pendant la saisie
         searchInput.addEventListener('input', filterPVCards);
+        
+        // Ajouter un filtre cumulatif avec la touche Entrée
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const searchTerm = this.value.trim();
+                if (searchTerm && !activeSearchFilters.includes(searchTerm.toLowerCase())) {
+                    activeSearchFilters.push(searchTerm.toLowerCase());
+                    this.value = '';
+                    updateActiveFiltersBadges();
+                    filterPVCards();
+                }
+            }
+        });
     }
     
     if (filterLastSent) {
-        filterLastSent.addEventListener('change', function() {
+        $(filterLastSent).on('change', function() {
             filterPVCards();
             populateFilterDropdowns();
         });
     }
     
     if (filterCompletion) {
-        filterCompletion.addEventListener('change', function() {
+        $(filterCompletion).on('change', function() {
             filterPVCards();
             populateFilterDropdowns();
         });
     }
     
     if (filterChantier) {
-        filterChantier.addEventListener('change', function() {
+        $(filterChantier).on('change', function() {
             filterPVCards();
             populateFilterDropdowns();
         });
     }
     
     if (filterMaterielType) {
-        filterMaterielType.addEventListener('change', function() {
+        $(filterMaterielType).on('change', function() {
             filterPVCards();
             populateFilterDropdowns();
         });
     }
     
     if (filterResponsable) {
-        filterResponsable.addEventListener('change', function() {
+        $(filterResponsable).on('change', function() {
             filterPVCards();
             populateFilterDropdowns();
         });
     }
     
     if (filterFournisseur) {
-        filterFournisseur.addEventListener('change', function() {
+        $(filterFournisseur).on('change', function() {
             filterPVCards();
             populateFilterDropdowns();
         });
     }
     
     if (filterEmailConducteur) {
-        filterEmailConducteur.addEventListener('change', function() {
+        $(filterEmailConducteur).on('change', function() {
             filterPVCards();
             populateFilterDropdowns();
         });
@@ -1513,17 +1635,20 @@ function initializePVSearch() {
     
     if (filterDateReception) {
         filterDateReception.addEventListener('change', function() {
+            const val = this.value;
             // Afficher/masquer le champ de date personnalisée
             if (filterDateReceptionCustom) {
-                if (this.value === 'custom') {
+                if (val === 'custom') {
                     filterDateReceptionCustom.classList.remove('d-none');
                 } else {
                     filterDateReceptionCustom.classList.add('d-none');
                     filterDateReceptionCustom.value = '';
                 }
             }
-            filterPVCards();
-            populateFilterDropdowns();
+            if (val !== 'custom') {
+                filterPVCards();
+                populateFilterDropdowns();
+            }
         });
     }
     
@@ -1536,24 +1661,20 @@ function initializePVSearch() {
     
     if (filterDateRetour) {
         filterDateRetour.addEventListener('change', function() {
-            filterPVCards();
-            populateFilterDropdowns();
-        });
-    }
-    
-    if (filterDateRetour) {
-        filterDateRetour.addEventListener('change', function() {
+            const val = this.value;
             // Afficher/masquer le champ de date personnalisée
             if (filterDateRetourCustom) {
-                if (this.value === 'custom') {
+                if (val === 'custom') {
                     filterDateRetourCustom.classList.remove('d-none');
                 } else {
                     filterDateRetourCustom.classList.add('d-none');
                     filterDateRetourCustom.value = '';
                 }
             }
-            filterPVCards();
-            populateFilterDropdowns();
+            if (val !== 'custom') {
+                filterPVCards();
+                populateFilterDropdowns();
+            }
         });
     }
     
@@ -1567,20 +1688,22 @@ function initializePVSearch() {
     if (clearFiltersBtn) {
         clearFiltersBtn.addEventListener('click', function() {
             // Réinitialiser tous les filtres
+            activeSearchFilters = [];
+            updateActiveFiltersBadges();
             if (searchInput) searchInput.value = '';
-            if (filterLastSent) filterLastSent.value = '';
-            if (filterCompletion) filterCompletion.value = '';
+            if (filterLastSent) $(filterLastSent).val('').trigger('change');
+            if (filterCompletion) $(filterCompletion).val('').trigger('change');
             if (filterChantier) $(filterChantier).val('').trigger('change');
             if (filterMaterielType) $(filterMaterielType).val('').trigger('change');
             if (filterResponsable) $(filterResponsable).val('').trigger('change');
             if (filterFournisseur) $(filterFournisseur).val('').trigger('change');
             if (filterEmailConducteur) $(filterEmailConducteur).val('').trigger('change');
-            if (filterDateReception) filterDateReception.value = '';
+            if (filterDateReception) $(filterDateReception).val('').trigger('change');
             if (filterDateReceptionCustom) {
                 filterDateReceptionCustom.value = '';
                 filterDateReceptionCustom.classList.add('d-none');
             }
-            if (filterDateRetour) filterDateRetour.value = '';
+            if (filterDateRetour) $(filterDateRetour).val('').trigger('change');
             if (filterDateRetourCustom) {
                 filterDateRetourCustom.value = '';
                 filterDateRetourCustom.classList.add('d-none');
@@ -1656,11 +1779,15 @@ function filterPVCards() {
     const searchTerm = searchInput.value.toLowerCase();
     const lastSentFilter = filterLastSent.value;
     const completionFilter = filterCompletion ? filterCompletion.value : '';
-    const chantierFilter = filterChantier ? filterChantier.value.toLowerCase() : '';
-    const materielTypeFilter = filterMaterielType ? filterMaterielType.value.toLowerCase() : '';
-    const responsableFilter = filterResponsable ? filterResponsable.value.toLowerCase() : '';
-    const fournisseurFilter = filterFournisseur ? filterFournisseur.value.toLowerCase() : '';
-    const emailConducteurFilter = filterEmailConducteur ? filterEmailConducteur.value.toLowerCase() : '';
+    
+    // Nettoyer les valeurs des filtres en enlevant les compteurs (X)
+    const cleanFilterValue = (value) => value ? value.replace(/\s*\(\d+\)\s*$/, '').trim() : '';
+    
+    const chantierFilter = filterChantier ? cleanFilterValue(filterChantier.value) : '';
+    const materielTypeFilter = filterMaterielType ? cleanFilterValue(filterMaterielType.value) : '';
+    const responsableFilter = filterResponsable ? cleanFilterValue(filterResponsable.value) : '';
+    const fournisseurFilter = filterFournisseur ? cleanFilterValue(filterFournisseur.value) : '';
+    const emailConducteurFilter = filterEmailConducteur ? cleanFilterValue(filterEmailConducteur.value) : '';
     const dateReceptionFilter = filterDateReception ? filterDateReception.value : '';
     const dateRetourFilter = filterDateRetour ? filterDateRetour.value : '';
     
@@ -1685,8 +1812,18 @@ function filterPVCards() {
         // Récupérer le texte de recherche complet qui contient tous les formats
         const searchableText = card.dataset.searchText || '';
         
-        // Vérifier la recherche textuelle
-        const matchesSearch = !searchTerm || searchableText.includes(searchTerm);
+        // Vérifier la recherche textuelle - cumul des filtres
+        let matchesSearch = true;
+        
+        // Si on a des filtres cumulés, tous doivent correspondre
+        if (activeSearchFilters.length > 0) {
+            matchesSearch = activeSearchFilters.every(filter => searchableText.includes(filter));
+        }
+        
+        // Si on a aussi du texte dans la barre de recherche, il doit correspondre en plus
+        if (searchTerm && matchesSearch) {
+            matchesSearch = searchableText.includes(searchTerm);
+        }
         
         // Vérifier le filtre de date d'envoi
         let matchesLastSent = true;
@@ -1712,19 +1849,23 @@ function filterPVCards() {
         const matchesCompletion = !completionFilter || (card.dataset.completionStatus || 'empty') === completionFilter;
         
         // Vérifier le filtre chantier
-        const matchesChantier = !chantierFilter || (card.dataset.chantier || '').toLowerCase() === chantierFilter;
+        const matchesChantier = !chantierFilter || (card.dataset.chantier || '').toLowerCase() === chantierFilter.toLowerCase();
         
         // Vérifier le filtre type matériel
-        const matchesMaterielType = !materielTypeFilter || (card.dataset.materielType || '').toLowerCase() === materielTypeFilter;
+        const matchesMaterielType = !materielTypeFilter || (card.dataset.materielType || '').toLowerCase() === materielTypeFilter.toLowerCase();
         
         // Vérifier le filtre responsable
-        const matchesResponsable = !responsableFilter || (card.dataset.responsable || '').toLowerCase() === responsableFilter;
+        const matchesResponsable = !responsableFilter || (card.dataset.responsable || '').toLowerCase() === responsableFilter.toLowerCase();
         
         // Vérifier le filtre fournisseur
-        const matchesFournisseur = !fournisseurFilter || (card.dataset.fournisseur || '').toLowerCase() === fournisseurFilter;
+        const matchesFournisseur = !fournisseurFilter || (card.dataset.fournisseur || '').toLowerCase() === fournisseurFilter.toLowerCase();
         
-        // Vérifier le filtre email conducteur
-        const matchesEmailConducteur = !emailConducteurFilter || (card.dataset.emailConducteur || '').toLowerCase() === emailConducteurFilter;
+        // Vérifier le filtre email conducteur (peut contenir plusieurs emails séparés par des espaces)
+        const matchesEmailConducteur = !emailConducteurFilter || (() => {
+            const emailList = (card.dataset.emailConducteur || '').toLowerCase();
+            // Vérifier si l'email recherché est dans la liste (séparés par des espaces)
+            return emailList.split(' ').some(email => email.trim() === emailConducteurFilter.toLowerCase());
+        })();
         
         // Vérifier le filtre date réception
         let matchesDateReception = true;
@@ -1820,7 +1961,18 @@ function updateActiveFiltersBadges() {
     const filterDateReception = document.getElementById('pvFilterDateReception');
     const filterDateRetour = document.getElementById('pvFilterDateRetour');
     
-    // Recherche textuelle
+    // Filtres de recherche cumulés
+    activeSearchFilters.forEach((filter, index) => {
+        activeFilters.push({
+            label: 'Recherche',
+            value: filter,
+            icon: 'fa-search',
+            filterId: 'cumulative-' + index,
+            isCumulative: true
+        });
+    });
+    
+    // Recherche textuelle en cours
     if (searchInput?.value) {
         activeFilters.push({
             label: 'Recherche',
@@ -1957,16 +2109,20 @@ function updateActiveFiltersBadges() {
         container.style.display = 'block';
         
         // Créer les badges
-        badgesContainer.innerHTML = activeFilters.map(filter => `
-            <span class="badge bg-primary d-flex align-items-center gap-2" style="font-size: 0.875rem; padding: 0.5rem 0.75rem;">
-                <i class="fas ${filter.icon}"></i>
-                <span>${filter.value}</span>
-                <button type="button" class="btn-close btn-close-white" 
-                        style="font-size: 0.6rem; padding: 0; margin-left: 0.25rem;"
-                        onclick="clearFilter('${filter.filterId}')"
-                        title="Retirer ce filtre"></button>
-            </span>
-        `).join('');
+        badgesContainer.innerHTML = activeFilters.map(filter => {
+            const bgColor = filter.isCumulative ? 'bg-success' : 'bg-primary';
+            const title = filter.isCumulative ? 'Filtre cumulatif - cliquer pour retirer' : 'Retirer ce filtre';
+            return `
+                <span class="badge ${bgColor} d-flex align-items-center gap-2" style="font-size: 0.875rem; padding: 0.5rem 0.75rem;">
+                    <i class="fas ${filter.icon}"></i>
+                    <span>${filter.value}</span>
+                    <button type="button" class="btn-close btn-close-white" 
+                            style="font-size: 0.6rem; padding: 0; margin-left: 0.25rem;"
+                            onclick="clearFilter('${filter.filterId}')"
+                            title="${title}"></button>
+                </span>
+            `;
+        }).join('');
     } else {
         container.style.display = 'none';
     }
@@ -1977,6 +2133,14 @@ function updateActiveFiltersBadges() {
  */
 function clearFilter(filterId) {
     let element;
+    
+    // Gérer les filtres cumulatifs
+    if (filterId.startsWith('cumulative-')) {
+        const index = parseInt(filterId.replace('cumulative-', ''));
+        activeSearchFilters.splice(index, 1);
+        filterPVCards();
+        return;
+    }
     
     switch(filterId) {
         case 'search':
@@ -2058,11 +2222,11 @@ function populateFilterDropdowns(pvs) {
     const currentFilters = {
         lastSent: document.getElementById('pvFilterLastSent')?.value || '',
         completion: document.getElementById('pvFilterCompletion')?.value || '',
-        chantier: document.getElementById('pvFilterChantier')?.value || '',
-        materielType: document.getElementById('pvFilterMaterielType')?.value || '',
-        responsable: document.getElementById('pvFilterResponsable')?.value || '',
-        fournisseur: document.getElementById('pvFilterFournisseur')?.value || '',
-        emailConducteur: document.getElementById('pvFilterEmailConducteur')?.value || '',
+        chantier: document.getElementById('pvFilterChantier')?.value.trim() || '',
+        materielType: document.getElementById('pvFilterMaterielType')?.value.trim() || '',
+        responsable: document.getElementById('pvFilterResponsable')?.value.trim() || '',
+        fournisseur: document.getElementById('pvFilterFournisseur')?.value.trim() || '',
+        emailConducteur: document.getElementById('pvFilterEmailConducteur')?.value.trim() || '',
         dateReception: document.getElementById('pvFilterDateReception')?.value || '',
         dateRetour: document.getElementById('pvFilterDateRetour')?.value || ''
     };
@@ -2107,21 +2271,21 @@ function populateFilterDropdowns(pvs) {
         const matchesCompletion = !currentFilters.completion || 
             (pv.completion_status || 'empty') === currentFilters.completion;
         const matchesChantier = !currentFilters.chantier || 
-            (pv.chantier || '').trim() === currentFilters.chantier;
+            (pv.chantier || '').trim().toLowerCase() === currentFilters.chantier.toLowerCase();
         const matchesMaterielType = !currentFilters.materielType || 
-            (pv.materiel_type || '').trim() === currentFilters.materielType;
+            (pv.materiel_type || '').trim().toLowerCase() === currentFilters.materielType.toLowerCase();
         const matchesResponsable = !currentFilters.responsable || 
-            (pv.responsable || '').trim() === currentFilters.responsable;
+            (pv.responsable || '').trim().toLowerCase() === currentFilters.responsable.toLowerCase();
         const matchesFournisseur = !currentFilters.fournisseur || 
-            (pv.fournisseur || '').trim() === currentFilters.fournisseur;
+            (pv.fournisseur || '').trim().toLowerCase() === currentFilters.fournisseur.toLowerCase();
         const matchesEmailConducteur = !currentFilters.emailConducteur || (() => {
             // Gérer le cas où email_conducteur est un tableau
             if (Array.isArray(pv.email_conducteur)) {
                 return pv.email_conducteur.some(email => 
-                    email && email.trim() === currentFilters.emailConducteur
+                    email && email.trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase()
                 );
             }
-            return (pv.email_conducteur || '').trim() === currentFilters.emailConducteur;
+            return (pv.email_conducteur || '').trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase();
         })();
         
         // Vérifier le filtre date réception avec périodes
@@ -2183,37 +2347,488 @@ function populateFilterDropdowns(pvs) {
             matchesDateReception && matchesDateRetour;
     });
     
-    const chantierSet = new Set();
-    const materielTypeSet = new Set();
-    const responsableSet = new Set();
-    const fournisseurSet = new Set();
-    const emailConducteurSet = new Set();
+    // Maps pour compter les PV par valeur en tenant compte de TOUS les filtres actifs
+    const chantierCount = new Map();
+    const materielTypeCount = new Map();
+    const responsableCount = new Map();
+    const fournisseurCount = new Map();
+    const emailConducteurCount = new Map();
     
-    filteredPVs.forEach(pv => {
+    // Pour chaque valeur possible, compter combien de PV correspondent à cette valeur + TOUS les filtres actifs
+    allPVData.forEach(pv => {
+        // Construire le texte de recherche pour ce PV
+        let searchText = [
+            pv.chantier,
+            pv.materiel_numero,
+            pv.materiel_type,
+            pv.fournisseur,
+            pv.responsable,
+            pv.email_entreprise
+        ].filter(Boolean).join(' ').toLowerCase();
+        
+        if (Array.isArray(pv.email_conducteur)) {
+            searchText += ' ' + pv.email_conducteur.filter(Boolean).join(' ').toLowerCase();
+        } else if (pv.email_conducteur) {
+            searchText += ' ' + pv.email_conducteur.toLowerCase();
+        }
+        
+        if (pv.date_reception) {
+            searchText += ' ' + pv.date_reception;
+            searchText += ' ' + pv.date_reception.replace(/-/g, '/');
+            const drParts = pv.date_reception.split('-');
+            if (drParts.length === 3) {
+                searchText += ' ' + drParts[2] + '-' + drParts[1] + '-' + drParts[0];
+                searchText += ' ' + drParts[2] + '/' + drParts[1] + '/' + drParts[0];
+            }
+        }
+        
+        if (pv.date_retour) {
+            searchText += ' ' + pv.date_retour;
+            searchText += ' ' + pv.date_retour.replace(/-/g, '/');
+            const drParts = pv.date_retour.split('-');
+            if (drParts.length === 3) {
+                searchText += ' ' + drParts[2] + '-' + drParts[1] + '-' + drParts[0];
+                searchText += ' ' + drParts[2] + '/' + drParts[1] + '/' + drParts[0];
+            }
+        }
+        
+        // Vérifier les filtres de recherche cumulatifs
+        const matchesSearchFilters = activeSearchFilters.length === 0 || 
+            activeSearchFilters.every(filter => searchText.includes(filter));
+        
+        if (!matchesSearchFilters) return; // Skip ce PV s'il ne correspond pas aux filtres de recherche
+        
+        // Vérifier tous les filtres SAUF celui qu'on est en train de peupler
+        const matchesLastSent = !currentFilters.lastSent || (() => {
+            const lastSentDate = pv.last_sent_date;
+            if (currentFilters.lastSent === 'never') {
+                return !lastSentDate || lastSentDate === '';
+            } else if (lastSentDate) {
+                const sentDate = new Date(lastSentDate);
+                if (currentFilters.lastSent === 'today') {
+                    return sentDate >= today;
+                } else if (currentFilters.lastSent === 'week') {
+                    return sentDate >= weekStart;
+                } else if (currentFilters.lastSent === 'month') {
+                    return sentDate >= monthStart;
+                }
+            }
+            return false;
+        })();
+        
+        const matchesCompletion = !currentFilters.completion || 
+            (pv.completion_status || 'empty') === currentFilters.completion;
+        
+        const matchesDateReception = !currentFilters.dateReception || (() => {
+            const dateReception = pv.date_reception;
+            if (currentFilters.dateReception === 'custom') {
+                const customDate = document.getElementById('pvFilterDateReceptionCustom')?.value;
+                return customDate && dateReception === customDate;
+            } else if (dateReception) {
+                const recDate = new Date(dateReception);
+                if (currentFilters.dateReception === 'today') {
+                    return recDate >= today && recDate < new Date(today.getTime() + 86400000);
+                } else if (currentFilters.dateReception === 'yesterday') {
+                    return recDate >= yesterday && recDate < today;
+                } else if (currentFilters.dateReception === 'week') {
+                    return recDate >= weekStart;
+                } else if (currentFilters.dateReception === 'lastWeek') {
+                    return recDate >= lastWeekStart && recDate <= lastWeekEnd;
+                } else if (currentFilters.dateReception === 'month') {
+                    return recDate >= monthStart;
+                } else if (currentFilters.dateReception === 'lastMonth') {
+                    return recDate >= lastMonthStart && recDate <= lastMonthEnd;
+                }
+            }
+            return false;
+        })();
+        
+        const matchesDateRetour = !currentFilters.dateRetour || (() => {
+            const dateRetour = pv.date_retour;
+            if (currentFilters.dateRetour === 'custom') {
+                const customDate = document.getElementById('pvFilterDateRetourCustom')?.value;
+                return customDate && dateRetour === customDate;
+            } else if (dateRetour) {
+                const retDate = new Date(dateRetour);
+                if (currentFilters.dateRetour === 'today') {
+                    return retDate >= today && retDate < new Date(today.getTime() + 86400000);
+                } else if (currentFilters.dateRetour === 'yesterday') {
+                    return retDate >= yesterday && retDate < today;
+                } else if (currentFilters.dateRetour === 'week') {
+                    return retDate >= weekStart;
+                } else if (currentFilters.dateRetour === 'lastWeek') {
+                    return retDate >= lastWeekStart && retDate <= lastWeekEnd;
+                } else if (currentFilters.dateRetour === 'month') {
+                    return retDate >= monthStart;
+                } else if (currentFilters.dateRetour === 'lastMonth') {
+                    return retDate >= lastMonthStart && retDate <= lastMonthEnd;
+                }
+            }
+            return false;
+        })();
+        
+        // Pour chantier : vérifier TOUS les filtres (y compris chantier lui-même)
         if (pv.chantier && pv.chantier.trim()) {
-            chantierSet.add(pv.chantier.trim());
+            const val = pv.chantier.trim();
+            const matchesChantier = val.toLowerCase() === pv.chantier.trim().toLowerCase();
+            const matchesMaterielType = !currentFilters.materielType || 
+                (pv.materiel_type || '').trim().toLowerCase() === currentFilters.materielType.toLowerCase();
+            const matchesResponsable = !currentFilters.responsable || 
+                (pv.responsable || '').trim().toLowerCase() === currentFilters.responsable.toLowerCase();
+            const matchesFournisseur = !currentFilters.fournisseur || 
+                (pv.fournisseur || '').trim().toLowerCase() === currentFilters.fournisseur.toLowerCase();
+            const matchesEmailConducteur = !currentFilters.emailConducteur || (() => {
+                if (Array.isArray(pv.email_conducteur)) {
+                    return pv.email_conducteur.some(email => 
+                        email && email.trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase()
+                    );
+                }
+                return (pv.email_conducteur || '').trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase();
+            })();
+            
+            if (matchesLastSent && matchesCompletion && matchesChantier && matchesMaterielType && 
+                matchesResponsable && matchesFournisseur && matchesEmailConducteur &&
+                matchesDateReception && matchesDateRetour) {
+                chantierCount.set(val, (chantierCount.get(val) || 0) + 1);
+            }
         }
+        
+        // Pour materielType : vérifier TOUS les filtres (y compris materielType lui-même)
         if (pv.materiel_type && pv.materiel_type.trim()) {
-            materielTypeSet.add(pv.materiel_type.trim());
+            const val = pv.materiel_type.trim();
+            const matchesMaterielType = val.toLowerCase() === pv.materiel_type.trim().toLowerCase();
+            const matchesChantier = !currentFilters.chantier || 
+                (pv.chantier || '').trim().toLowerCase() === currentFilters.chantier.toLowerCase();
+            const matchesResponsable = !currentFilters.responsable || 
+                (pv.responsable || '').trim().toLowerCase() === currentFilters.responsable.toLowerCase();
+            const matchesFournisseur = !currentFilters.fournisseur || 
+                (pv.fournisseur || '').trim().toLowerCase() === currentFilters.fournisseur.toLowerCase();
+            const matchesEmailConducteur = !currentFilters.emailConducteur || (() => {
+                if (Array.isArray(pv.email_conducteur)) {
+                    return pv.email_conducteur.some(email => 
+                        email && email.trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase()
+                    );
+                }
+                return (pv.email_conducteur || '').trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase();
+            })();
+            
+            if (matchesLastSent && matchesCompletion && matchesChantier && matchesMaterielType &&
+                matchesResponsable && matchesFournisseur && matchesEmailConducteur &&
+                matchesDateReception && matchesDateRetour) {
+                materielTypeCount.set(val, (materielTypeCount.get(val) || 0) + 1);
+            }
         }
+        
+        // Pour responsable : vérifier TOUS les filtres (y compris responsable lui-même)
         if (pv.responsable && pv.responsable.trim()) {
-            responsableSet.add(pv.responsable.trim());
+            const val = pv.responsable.trim();
+            const matchesResponsable = val.toLowerCase() === pv.responsable.trim().toLowerCase();
+            const matchesChantier = !currentFilters.chantier || 
+                (pv.chantier || '').trim().toLowerCase() === currentFilters.chantier.toLowerCase();
+            const matchesMaterielType = !currentFilters.materielType || 
+                (pv.materiel_type || '').trim().toLowerCase() === currentFilters.materielType.toLowerCase();
+            const matchesFournisseur = !currentFilters.fournisseur || 
+                (pv.fournisseur || '').trim().toLowerCase() === currentFilters.fournisseur.toLowerCase();
+            const matchesEmailConducteur = !currentFilters.emailConducteur || (() => {
+                if (Array.isArray(pv.email_conducteur)) {
+                    return pv.email_conducteur.some(email => 
+                        email && email.trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase()
+                    );
+                }
+                return (pv.email_conducteur || '').trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase();
+            })();
+            
+            if (matchesLastSent && matchesCompletion && matchesChantier && matchesMaterielType && 
+                matchesFournisseur && matchesEmailConducteur &&
+                matchesDateReception && matchesDateRetour) {
+                responsableCount.set(val, (responsableCount.get(val) || 0) + 1);
+            }
         }
+        
+        // Pour fournisseur : vérifier TOUS les filtres (y compris fournisseur lui-même)
         if (pv.fournisseur && pv.fournisseur.trim()) {
-            fournisseurSet.add(pv.fournisseur.trim());
+            const val = pv.fournisseur.trim();
+            const matchesFournisseur = val.toLowerCase() === pv.fournisseur.trim().toLowerCase();
+            const matchesChantier = !currentFilters.chantier || 
+                (pv.chantier || '').trim().toLowerCase() === currentFilters.chantier.toLowerCase();
+            const matchesMaterielType = !currentFilters.materielType || 
+                (pv.materiel_type || '').trim().toLowerCase() === currentFilters.materielType.toLowerCase();
+            const matchesResponsable = !currentFilters.responsable || 
+                (pv.responsable || '').trim().toLowerCase() === currentFilters.responsable.toLowerCase();
+            const matchesEmailConducteur = !currentFilters.emailConducteur || (() => {
+                if (Array.isArray(pv.email_conducteur)) {
+                    return pv.email_conducteur.some(email => 
+                        email && email.trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase()
+                    );
+                }
+                return (pv.email_conducteur || '').trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase();
+            })();
+            
+            if (matchesLastSent && matchesCompletion && matchesChantier && matchesMaterielType && 
+                matchesResponsable && matchesFournisseur && matchesEmailConducteur &&
+                matchesDateReception && matchesDateRetour) {
+                fournisseurCount.set(val, (fournisseurCount.get(val) || 0) + 1);
+            }
         }
-        // Gérer email_conducteur qui peut être un tableau ou une string
+        
+        // Pour emailConducteur : vérifier TOUS les filtres (y compris emailConducteur lui-même)
         if (pv.email_conducteur) {
             const emails = Array.isArray(pv.email_conducteur) ? pv.email_conducteur : [pv.email_conducteur];
             emails.forEach(email => {
                 if (email && typeof email === 'string' && email.trim()) {
-                    emailConducteurSet.add(email.trim());
+                    const val = email.trim();
+                    const matchesEmailConducteur = val.toLowerCase() === email.trim().toLowerCase();
+                    const matchesChantier = !currentFilters.chantier || 
+                        (pv.chantier || '').trim().toLowerCase() === currentFilters.chantier.toLowerCase();
+                    const matchesMaterielType = !currentFilters.materielType || 
+                        (pv.materiel_type || '').trim().toLowerCase() === currentFilters.materielType.toLowerCase();
+                    const matchesResponsable = !currentFilters.responsable || 
+                        (pv.responsable || '').trim().toLowerCase() === currentFilters.responsable.toLowerCase();
+                    const matchesFournisseur = !currentFilters.fournisseur || 
+                        (pv.fournisseur || '').trim().toLowerCase() === currentFilters.fournisseur.toLowerCase();
+                    
+                    if (matchesLastSent && matchesCompletion && matchesChantier && matchesMaterielType && 
+                        matchesResponsable && matchesFournisseur && matchesEmailConducteur &&
+                        matchesDateReception && matchesDateRetour) {
+                        emailConducteurCount.set(val, (emailConducteurCount.get(val) || 0) + 1);
+                    }
                 }
             });
         }
     });
     
-    // Peupler le dropdown chantier
+    // Construire les sets à partir des counts (pour avoir les valeurs uniques)
+    const chantierSet = new Set(chantierCount.keys());
+    const materielTypeSet = new Set(materielTypeCount.keys());
+    const responsableSet = new Set(responsableCount.keys());
+    const fournisseurSet = new Set(fournisseurCount.keys());
+    const emailConducteurSet = new Set(emailConducteurCount.keys());
+    
+    // Calculer les compteurs pour les autres filtres (complétion, dates, etc.)
+    const completionCount = new Map();
+    const lastSentCount = new Map();
+    const dateReceptionCount = new Map();
+    const dateRetourCount = new Map();
+    
+    allPVData.forEach(pv => {
+        // Construire le texte de recherche pour ce PV
+        let searchText = [
+            pv.chantier,
+            pv.materiel_numero,
+            pv.materiel_type,
+            pv.fournisseur,
+            pv.responsable,
+            pv.email_entreprise
+        ].filter(Boolean).join(' ').toLowerCase();
+        
+        if (Array.isArray(pv.email_conducteur)) {
+            searchText += ' ' + pv.email_conducteur.filter(Boolean).join(' ').toLowerCase();
+        } else if (pv.email_conducteur) {
+            searchText += ' ' + pv.email_conducteur.toLowerCase();
+        }
+        
+        if (pv.date_reception) {
+            searchText += ' ' + pv.date_reception;
+            searchText += ' ' + pv.date_reception.replace(/-/g, '/');
+        }
+        
+        if (pv.date_retour) {
+            searchText += ' ' + pv.date_retour;
+            searchText += ' ' + pv.date_retour.replace(/-/g, '/');
+        }
+        
+        // Vérifier les filtres de recherche cumulatifs
+        const matchesSearchFilters = activeSearchFilters.length === 0 || 
+            activeSearchFilters.every(filter => searchText.includes(filter));
+        
+        if (!matchesSearchFilters) return;
+        
+        // Vérifier tous les autres filtres actifs
+        const matchesChantier = !currentFilters.chantier || 
+            (pv.chantier || '').trim() === currentFilters.chantier;
+        const matchesMaterielType = !currentFilters.materielType || 
+            (pv.materiel_type || '').trim() === currentFilters.materielType;
+        const matchesResponsable = !currentFilters.responsable || 
+            (pv.responsable || '').trim() === currentFilters.responsable;
+        const matchesFournisseur = !currentFilters.fournisseur || 
+            (pv.fournisseur || '').trim() === currentFilters.fournisseur;
+        const matchesEmailConducteur = !currentFilters.emailConducteur || (() => {
+            if (Array.isArray(pv.email_conducteur)) {
+                return pv.email_conducteur.some(email => 
+                    email && email.trim() === currentFilters.emailConducteur
+                );
+            }
+            return (pv.email_conducteur || '').trim() === currentFilters.emailConducteur;
+        })();
+        
+        // Compter pour complétion (exclure filtre complétion)
+        if (matchesChantier && matchesMaterielType && matchesResponsable && 
+            matchesFournisseur && matchesEmailConducteur) {
+            const status = pv.completion_status || 'empty';
+            completionCount.set(status, (completionCount.get(status) || 0) + 1);
+        }
+        
+        // Compter pour lastSent (exclure filtre lastSent et complétion)
+        if (matchesChantier && matchesMaterielType && matchesResponsable && 
+            matchesFournisseur && matchesEmailConducteur && 
+            (!currentFilters.completion || (pv.completion_status || 'empty') === currentFilters.completion)) {
+            const lastSentDate = pv.last_sent_date;
+            if (!lastSentDate) {
+                lastSentCount.set('never', (lastSentCount.get('never') || 0) + 1);
+            } else {
+                const sentDate = new Date(lastSentDate);
+                if (sentDate >= today) {
+                    lastSentCount.set('today', (lastSentCount.get('today') || 0) + 1);
+                }
+                if (sentDate >= weekStart) {
+                    lastSentCount.set('week', (lastSentCount.get('week') || 0) + 1);
+                }
+                if (sentDate >= monthStart) {
+                    lastSentCount.set('month', (lastSentCount.get('month') || 0) + 1);
+                }
+            }
+        }
+        
+        // Compter pour date réception (exclure filtre date réception)
+        if (matchesChantier && matchesMaterielType && matchesResponsable && 
+            matchesFournisseur && matchesEmailConducteur &&
+            (!currentFilters.completion || (pv.completion_status || 'empty') === currentFilters.completion) &&
+            (!currentFilters.lastSent || (() => {
+                const lastSentDate = pv.last_sent_date;
+                if (currentFilters.lastSent === 'never') return !lastSentDate;
+                if (!lastSentDate) return false;
+                const sentDate = new Date(lastSentDate);
+                if (currentFilters.lastSent === 'today') return sentDate >= today;
+                if (currentFilters.lastSent === 'week') return sentDate >= weekStart;
+                if (currentFilters.lastSent === 'month') return sentDate >= monthStart;
+                return false;
+            })())) {
+            const dateReception = pv.date_reception;
+            if (dateReception) {
+                const recDate = new Date(dateReception);
+                if (recDate >= today && recDate < new Date(today.getTime() + 86400000)) {
+                    dateReceptionCount.set('today', (dateReceptionCount.get('today') || 0) + 1);
+                }
+                if (recDate >= yesterday && recDate < today) {
+                    dateReceptionCount.set('yesterday', (dateReceptionCount.get('yesterday') || 0) + 1);
+                }
+                if (recDate >= weekStart) {
+                    dateReceptionCount.set('week', (dateReceptionCount.get('week') || 0) + 1);
+                }
+                if (recDate >= lastWeekStart && recDate <= lastWeekEnd) {
+                    dateReceptionCount.set('lastWeek', (dateReceptionCount.get('lastWeek') || 0) + 1);
+                }
+                if (recDate >= monthStart) {
+                    dateReceptionCount.set('month', (dateReceptionCount.get('month') || 0) + 1);
+                }
+                if (recDate >= lastMonthStart && recDate <= lastMonthEnd) {
+                    dateReceptionCount.set('lastMonth', (dateReceptionCount.get('lastMonth') || 0) + 1);
+                }
+            }
+        }
+        
+        // Compter pour date retour (exclure filtre date retour)
+        if (matchesChantier && matchesMaterielType && matchesResponsable && 
+            matchesFournisseur && matchesEmailConducteur &&
+            (!currentFilters.completion || (pv.completion_status || 'empty') === currentFilters.completion) &&
+            (!currentFilters.lastSent || (() => {
+                const lastSentDate = pv.last_sent_date;
+                if (currentFilters.lastSent === 'never') return !lastSentDate;
+                if (!lastSentDate) return false;
+                const sentDate = new Date(lastSentDate);
+                if (currentFilters.lastSent === 'today') return sentDate >= today;
+                if (currentFilters.lastSent === 'week') return sentDate >= weekStart;
+                if (currentFilters.lastSent === 'month') return sentDate >= monthStart;
+                return false;
+            })())) {
+            const dateRetour = pv.date_retour;
+            if (dateRetour) {
+                const retDate = new Date(dateRetour);
+                if (retDate >= today && retDate < new Date(today.getTime() + 86400000)) {
+                    dateRetourCount.set('today', (dateRetourCount.get('today') || 0) + 1);
+                }
+                if (retDate >= yesterday && retDate < today) {
+                    dateRetourCount.set('yesterday', (dateRetourCount.get('yesterday') || 0) + 1);
+                }
+                if (retDate >= weekStart) {
+                    dateRetourCount.set('week', (dateRetourCount.get('week') || 0) + 1);
+                }
+                if (retDate >= lastWeekStart && retDate <= lastWeekEnd) {
+                    dateRetourCount.set('lastWeek', (dateRetourCount.get('lastWeek') || 0) + 1);
+                }
+                if (retDate >= monthStart) {
+                    dateRetourCount.set('month', (dateRetourCount.get('month') || 0) + 1);
+                }
+                if (retDate >= lastMonthStart && retDate <= lastMonthEnd) {
+                    dateRetourCount.set('lastMonth', (dateRetourCount.get('lastMonth') || 0) + 1);
+                }
+            }
+        }
+    });
+    
+    // Peupler le select dernier envoi
+    const lastSentSelect = document.getElementById('pvFilterLastSent');
+    if (lastSentSelect) {
+        const currentValue = lastSentSelect.value;
+        lastSentSelect.innerHTML = `
+            <option value="">Toutes dates</option>
+            <option value="today">Aujourd'hui (${lastSentCount.get('today') || 0})</option>
+            <option value="week">Cette semaine (${lastSentCount.get('week') || 0})</option>
+            <option value="month">Ce mois (${lastSentCount.get('month') || 0})</option>
+            <option value="never">Jamais envoyé (${lastSentCount.get('never') || 0})</option>
+        `;
+        if (currentValue) lastSentSelect.value = currentValue;
+    }
+    
+    // Peupler le select complétion
+    const completionSelect = document.getElementById('pvFilterCompletion');
+    if (completionSelect) {
+        const currentValue = completionSelect.value;
+        completionSelect.innerHTML = `
+            <option value="">Tous états</option>
+            <option value="complete">Complet (Réception + Retour) (${completionCount.get('complete') || 0})</option>
+            <option value="reception_only">Réception seulement (${completionCount.get('reception_only') || 0})</option>
+            <option value="retour_only">Retour seulement (${completionCount.get('retour_only') || 0})</option>
+            <option value="empty">Non signé (${completionCount.get('empty') || 0})</option>
+        `;
+        if (currentValue) completionSelect.value = currentValue;
+    }
+    
+    // Peupler le select date réception
+    const dateReceptionSelect = document.getElementById('pvFilterDateReception');
+    if (dateReceptionSelect) {
+        const currentValue = dateReceptionSelect.value;
+        dateReceptionSelect.innerHTML = `
+            <option value="">Toutes dates</option>
+            <option value="today">Aujourd'hui (${dateReceptionCount.get('today') || 0})</option>
+            <option value="yesterday">Hier (${dateReceptionCount.get('yesterday') || 0})</option>
+            <option value="week">Cette semaine (${dateReceptionCount.get('week') || 0})</option>
+            <option value="lastWeek">Semaine dernière (${dateReceptionCount.get('lastWeek') || 0})</option>
+            <option value="month">Ce mois (${dateReceptionCount.get('month') || 0})</option>
+            <option value="lastMonth">Mois dernier (${dateReceptionCount.get('lastMonth') || 0})</option>
+            <option value="custom">Date précise...</option>
+        `;
+        if (currentValue) dateReceptionSelect.value = currentValue;
+    }
+    
+    // Peupler le select date retour
+    const dateRetourSelect = document.getElementById('pvFilterDateRetour');
+    if (dateRetourSelect) {
+        const currentValue = dateRetourSelect.value;
+        dateRetourSelect.innerHTML = `
+            <option value="">Toutes dates</option>
+            <option value="today">Aujourd'hui (${dateRetourCount.get('today') || 0})</option>
+            <option value="yesterday">Hier (${dateRetourCount.get('yesterday') || 0})</option>
+            <option value="week">Cette semaine (${dateRetourCount.get('week') || 0})</option>
+            <option value="lastWeek">Semaine dernière (${dateRetourCount.get('lastWeek') || 0})</option>
+            <option value="month">Ce mois (${dateRetourCount.get('month') || 0})</option>
+            <option value="lastMonth">Mois dernier (${dateRetourCount.get('lastMonth') || 0})</option>
+            <option value="custom">Date précise...</option>
+        `;
+        if (currentValue) dateRetourSelect.value = currentValue;
+    }
+    
+    // Peupler le select chantier
     const chantierSelect = document.getElementById('pvFilterChantier');
     if (chantierSelect) {
         const currentValue = chantierSelect.value;
@@ -2221,16 +2836,16 @@ function populateFilterDropdowns(pvs) {
         Array.from(chantierSet).sort().forEach(chantier => {
             const option = document.createElement('option');
             option.value = chantier;
-            option.textContent = chantier;
+            const count = chantierCount.get(chantier) || 0;
+            option.textContent = `${chantier} (${count})`;
             chantierSelect.appendChild(option);
         });
-        // Restaurer la valeur si elle existe toujours
         if (currentValue && chantierSet.has(currentValue)) {
             chantierSelect.value = currentValue;
         }
     }
     
-    // Peupler le dropdown type matériel
+    // Peupler le select type matériel
     const materielTypeSelect = document.getElementById('pvFilterMaterielType');
     if (materielTypeSelect) {
         const currentValue = materielTypeSelect.value;
@@ -2238,7 +2853,8 @@ function populateFilterDropdowns(pvs) {
         Array.from(materielTypeSet).sort().forEach(type => {
             const option = document.createElement('option');
             option.value = type;
-            option.textContent = type;
+            const count = materielTypeCount.get(type) || 0;
+            option.textContent = `${type} (${count})`;
             materielTypeSelect.appendChild(option);
         });
         if (currentValue && materielTypeSet.has(currentValue)) {
@@ -2246,7 +2862,7 @@ function populateFilterDropdowns(pvs) {
         }
     }
     
-    // Peupler le dropdown responsable
+    // Peupler le select responsable
     const responsableSelect = document.getElementById('pvFilterResponsable');
     if (responsableSelect) {
         const currentValue = responsableSelect.value;
@@ -2254,7 +2870,8 @@ function populateFilterDropdowns(pvs) {
         Array.from(responsableSet).sort().forEach(resp => {
             const option = document.createElement('option');
             option.value = resp;
-            option.textContent = resp;
+            const count = responsableCount.get(resp) || 0;
+            option.textContent = `${resp} (${count})`;
             responsableSelect.appendChild(option);
         });
         if (currentValue && responsableSet.has(currentValue)) {
@@ -2262,7 +2879,7 @@ function populateFilterDropdowns(pvs) {
         }
     }
     
-    // Peupler le dropdown fournisseur
+    // Peupler le select fournisseur
     const fournisseurSelect = document.getElementById('pvFilterFournisseur');
     if (fournisseurSelect) {
         const currentValue = fournisseurSelect.value;
@@ -2270,7 +2887,8 @@ function populateFilterDropdowns(pvs) {
         Array.from(fournisseurSet).sort().forEach(fourn => {
             const option = document.createElement('option');
             option.value = fourn;
-            option.textContent = fourn;
+            const count = fournisseurCount.get(fourn) || 0;
+            option.textContent = `${fourn} (${count})`;
             fournisseurSelect.appendChild(option);
         });
         if (currentValue && fournisseurSet.has(currentValue)) {
@@ -2278,7 +2896,7 @@ function populateFilterDropdowns(pvs) {
         }
     }
     
-    // Peupler le dropdown email conducteur
+    // Peupler le select email conducteur
     const emailConducteurSelect = document.getElementById('pvFilterEmailConducteur');
     if (emailConducteurSelect) {
         const currentValue = emailConducteurSelect.value;
@@ -2286,7 +2904,8 @@ function populateFilterDropdowns(pvs) {
         Array.from(emailConducteurSet).sort().forEach(email => {
             const option = document.createElement('option');
             option.value = email;
-            option.textContent = email;
+            const count = emailConducteurCount.get(email) || 0;
+            option.textContent = `${email} (${count})`;
             emailConducteurSelect.appendChild(option);
         });
         if (currentValue && emailConducteurSet.has(currentValue)) {
@@ -3112,13 +3731,6 @@ function updatePVStatusBadge() {
             criticalBadge = `<span class="badge ${badgeClass} ms-2"><i class="fas fa-exclamation-triangle me-1"></i>Manquant: ${missingText}</span>`;
         }
         
-        // ===== BADGE INSPECTION (recommandé) =====
-        let inspectionBadge = '';
-        if (missingInspection.length > 0) {
-            const inspectionText = missingInspection.join(', ');
-            inspectionBadge = `<span class="badge bg-info ms-2"><i class="fas fa-clipboard-check me-1"></i>Inspection: ${inspectionText}</span>`;
-        }
-        
         // ===== BADGE SIGNATURE =====
         let signatureBadge = '';
         if (missingCritical.length === 0) { // Afficher seulement si les champs critiques sont OK
@@ -3140,7 +3752,6 @@ function updatePVStatusBadge() {
             <div class="d-flex align-items-center gap-1 flex-wrap">
                 ${criticalBadge}
                 ${signatureBadge}
-                ${inspectionBadge}
                 ${sentInfo}
             </div>
         `;
@@ -3725,17 +4336,53 @@ function initSingleSelect2Field($field, fieldId, fieldData) {
  */
 
 /**
- * Initialise la gestion de l'email entreprise - charge le dernier email utilisé
+ * Initialise la gestion de l'email entreprise - synchronise le champ global avec le formulaire
  */
 function initializeEmailEntreprise() {
-    const emailField = document.getElementById('email_entreprise');
-    if (!emailField) return;
+    const globalEmailField = $('#global_email_entreprise');
+    const formEmailField = $('#email_entreprise');
     
-    // Charger le dernier email utilisé depuis l'historique
+    if (!globalEmailField.length) return;
+    
+    // Initialiser Select2 sur le champ global
     const history = getFieldHistory('email_entreprise');
+    history.forEach(value => {
+        if (value && value.trim()) {
+            globalEmailField.append(new Option(value, value, false, false));
+        }
+    });
+    
+    initSingleSelect2Field(globalEmailField, 'global_email_entreprise', {});
+    
+    // Charger le dernier email utilisé
     if (history.length > 0) {
-        emailField.value = history[0]; // Le plus récent
+        globalEmailField.val(history[0]).trigger('change');
+        // Pré-remplir aussi le champ du formulaire
+        if (formEmailField.length) {
+            formEmailField.val(history[0]).trigger('change');
+        }
     }
+    
+    // Synchroniser : quand on change le champ global, mettre à jour le champ du formulaire
+    globalEmailField.on('change', function() {
+        const selectedValue = $(this).val();
+        if (selectedValue && formEmailField.length) {
+            formEmailField.val(selectedValue).trigger('change');
+        }
+    });
+    
+    // Synchroniser dans l'autre sens : quand on change le champ du formulaire, mettre à jour le global
+    formEmailField.on('change', function() {
+        const selectedValue = $(this).val();
+        if (selectedValue && globalEmailField.length && globalEmailField.val() !== selectedValue) {
+            // Vérifier si la valeur existe dans les options du champ global
+            if (globalEmailField.find(`option[value="${selectedValue}"]`).length === 0) {
+                // Ajouter l'option si elle n'existe pas
+                globalEmailField.append(new Option(selectedValue, selectedValue, false, false));
+            }
+            globalEmailField.val(selectedValue).trigger('change');
+        }
+    });
 }
 
 /**
@@ -3980,6 +4627,84 @@ function initScrollNavigation() {
     
     // Vérification initiale
     checkScrollPosition();
+}
+
+/**
+ * Ouvre le sélecteur de fichier pour ajouter des photos à un élément d'inspection
+ * @param {string} fieldName - Le nom du champ (ex: 'carrosserie', 'eclairage', etc.)
+ */
+function openPhotoModal(fieldName) {
+    // Déterminer le type de PV actif (réception ou retour)
+    const pvType = document.querySelector('input[name="pv_type"]:checked')?.value || 'reception';
+    
+    // Trouver l'input file correspondant
+    const containerId = `photos_${fieldName}_${pvType}`;
+    const container = document.getElementById(containerId);
+    
+    if (!container) {
+        console.error(`Container ${containerId} not found`);
+        return;
+    }
+    
+    const fileInput = container.querySelector('.photo-upload');
+    if (!fileInput) {
+        console.error(`File input not found in ${containerId}`);
+        return;
+    }
+    
+    // Déclencher le click pour ouvrir le sélecteur
+    fileInput.click();
+}
+
+/**
+ * Met à jour l'affichage des photos dans la colonne Élément
+ * @param {string} fieldName - Le nom du champ
+ * @param {string} pvType - Le type de PV (reception ou retour)
+ */
+function updatePhotoPreview(fieldName, pvType) {
+    const previewContainer = document.getElementById(`photos_preview_${fieldName}`);
+    if (!previewContainer) return;
+    
+    // Récupérer toutes les photos des deux types
+    const receptionContainer = document.getElementById(`photos_${fieldName}_reception`);
+    const retourContainer = document.getElementById(`photos_${fieldName}_retour`);
+    
+    // Vider le container
+    previewContainer.innerHTML = '';
+    
+    // Fonction pour ajouter les aperçus d'un container
+    const addPreviews = (container, type) => {
+        if (!container) return;
+        const photoItems = container.querySelectorAll('.photo-item');
+        photoItems.forEach((item, index) => {
+            const preview = item.querySelector('.photo-preview img');
+            if (preview && preview.src) {
+                const previewItem = document.createElement('div');
+                previewItem.className = 'photo-preview-item';
+                previewItem.title = type === 'reception' ? 'Réception' : 'Retour';
+                
+                const img = document.createElement('img');
+                img.src = preview.src;
+                img.alt = `Photo ${type}`;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-photo';
+                removeBtn.innerHTML = '×';
+                removeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    item.remove();
+                    updatePhotoPreview(fieldName, pvType);
+                };
+                
+                previewItem.appendChild(img);
+                previewItem.appendChild(removeBtn);
+                previewContainer.appendChild(previewItem);
+            }
+        });
+    };
+    
+    addPreviews(receptionContainer, 'reception');
+    addPreviews(retourContainer, 'retour');
 }
 
 
