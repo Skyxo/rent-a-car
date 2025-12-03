@@ -40,12 +40,17 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeStickyHeader();
     initializeEmailEntreprise();
     initScrollNavigation();
+    initializeScrollButtons(); // Initialiser les boutons de navigation
+    checkVGPAlerts(); // Vérifier les alertes VGP au chargement
     
     // Ajouter la classe au body pour le padding de l'indicateur
     document.body.classList.add('has-pv-indicator');
     
     // Définir la hauteur de l'indicateur en variable CSS
     updateIndicatorHeight();
+    
+    // Restaurer le PV actuel après rafraîchissement (Ctrl+Shift+R)
+    restoreCurrentPV();
 });
 
 /**
@@ -56,6 +61,28 @@ function updateIndicatorHeight() {
     if (indicator) {
         const height = indicator.offsetHeight;
         document.documentElement.style.setProperty('--pv-indicator-height', height + 'px');
+    }
+}
+
+/**
+ * Restaure le PV actuel après un rafraîchissement de page
+ */
+async function restoreCurrentPV() {
+    const savedPVId = localStorage.getItem('currentPVId');
+    const savedVersion = localStorage.getItem('currentPVVersion');
+    
+    if (savedPVId) {
+        // Attendre un peu que la liste des PV soit chargée
+        setTimeout(async () => {
+            await loadPVById(savedPVId, true);
+            
+            // Si une version spécifique était consultée, la recharger
+            if (savedVersion && savedVersion !== '1') {
+                setTimeout(async () => {
+                    await loadPVVersion(savedPVId, parseInt(savedVersion));
+                }, 300);
+            }
+        }, 500);
     }
 }
 
@@ -247,7 +274,7 @@ function initializeStickyHeader() {
             
             // Afficher le sélecteur compact dans l'indicateur
             if (pvTypeCompact) {
-                pvTypeCompact.style.display = 'block';
+                pvTypeCompact.style.display = 'flex';
             }
         }
         // Désactiver le sticky uniquement quand le placeholder revient en vue
@@ -664,6 +691,24 @@ function initializeFormValidation() {
         
         if (!hasReceptionData && !hasRetourData) {
             alert('⚠️ Veuillez signer au moins une section (Réception ou Retour).');
+            return false;
+        }
+        
+        // Valider la conformité réglementaire (obligatoire)
+        const conformiteReceptionChecked = document.querySelector('input[name="conformite_reception"]:checked');
+        const conformiteRetourChecked = document.querySelector('input[name="conformite_retour"]:checked');
+        
+        if (hasReceptionData && !conformiteReceptionChecked) {
+            alert('⚠️ La conformité réglementaire à la réception est obligatoire.');
+            // Scroller vers le champ
+            document.querySelector('input[name="conformite_reception"]').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
+        
+        if (hasRetourData && !conformiteRetourChecked) {
+            alert('⚠️ La conformité réglementaire au retour est obligatoire.');
+            // Scroller vers le champ
+            document.querySelector('input[name="conformite_retour"]').scrollIntoView({ behavior: 'smooth', block: 'center' });
             return false;
         }
         
@@ -1200,6 +1245,12 @@ async function loadSavedPVList() {
                     completionBadge = '<span class="completion-badge empty"><i class="fas fa-times-circle"></i> Non signé</span>';
                 }
                 
+                // Badge du nombre de versions
+                const versionCount = pv.version_courante || 1;
+                const versionBadge = `<span class="version-badge" title="${versionCount} version${versionCount > 1 ? 's' : ''}">
+                    <i class="fas fa-code-branch"></i> v${versionCount}
+                </span>`;
+                
                 // Créer la carte
                 const card = document.createElement('div');
                 card.className = 'pv-card';
@@ -1337,6 +1388,7 @@ async function loadSavedPVList() {
                             ${pv.chantier || 'Sans nom'}
                         </h6>
                         <div class="pv-card-badges">
+                            ${versionBadge}
                             ${completionBadge}
                             ${lastSentBadge}
                         </div>
@@ -1379,6 +1431,9 @@ async function loadSavedPVList() {
             
             // Peupler les dropdowns de filtre
             populateFilterDropdowns(data.pv_list);
+            
+            // Mettre à jour les propositions Select2 des champs du formulaire
+            updateSelect2FieldsFromDB();
             
             // Appliquer les filtres après que le DOM soit mis à jour
             requestAnimationFrame(() => {
@@ -1432,10 +1487,10 @@ function checkScrollableList() {
 function attachPVCardEvents() {
     // Événement de clic sur les boutons "Supprimer"
     document.querySelectorAll('.delete-pv-btn').forEach(btn => {
-        btn.addEventListener('click', async function(e) {
+        btn.addEventListener('click', function(e) {
             e.stopPropagation();
             const pvId = this.dataset.pvId;
-            await deletePVById(pvId);
+            deletePVById(pvId);
         });
     });
     
@@ -1787,7 +1842,11 @@ function filterPVCards() {
     const materielTypeFilter = filterMaterielType ? cleanFilterValue(filterMaterielType.value) : '';
     const responsableFilter = filterResponsable ? cleanFilterValue(filterResponsable.value) : '';
     const fournisseurFilter = filterFournisseur ? cleanFilterValue(filterFournisseur.value) : '';
-    const emailConducteurFilter = filterEmailConducteur ? cleanFilterValue(filterEmailConducteur.value) : '';
+    
+    // Email conducteur peut être multiple (array)
+    const emailConducteurFilter = filterEmailConducteur ? 
+        (Array.isArray(filterEmailConducteur.value) ? filterEmailConducteur.value : [filterEmailConducteur.value]).filter(v => v) : [];
+    
     const dateReceptionFilter = filterDateReception ? filterDateReception.value : '';
     const dateRetourFilter = filterDateRetour ? filterDateRetour.value : '';
     
@@ -1861,10 +1920,12 @@ function filterPVCards() {
         const matchesFournisseur = !fournisseurFilter || (card.dataset.fournisseur || '').toLowerCase() === fournisseurFilter.toLowerCase();
         
         // Vérifier le filtre email conducteur (peut contenir plusieurs emails séparés par des espaces)
-        const matchesEmailConducteur = !emailConducteurFilter || (() => {
-            const emailList = (card.dataset.emailConducteur || '').toLowerCase();
-            // Vérifier si l'email recherché est dans la liste (séparés par des espaces)
-            return emailList.split(' ').some(email => email.trim() === emailConducteurFilter.toLowerCase());
+        const matchesEmailConducteur = emailConducteurFilter.length === 0 || (() => {
+            const emailList = (card.dataset.emailConducteur || '').toLowerCase().split(' ');
+            // Vérifier si au moins un des emails filtrés est présent dans la carte
+            return emailConducteurFilter.some(filterEmail => 
+                emailList.some(cardEmail => cardEmail.trim() === filterEmail.toLowerCase())
+            );
         })();
         
         // Vérifier le filtre date réception
@@ -2226,9 +2287,30 @@ function populateFilterDropdowns(pvs) {
         materielType: document.getElementById('pvFilterMaterielType')?.value.trim() || '',
         responsable: document.getElementById('pvFilterResponsable')?.value.trim() || '',
         fournisseur: document.getElementById('pvFilterFournisseur')?.value.trim() || '',
-        emailConducteur: document.getElementById('pvFilterEmailConducteur')?.value.trim() || '',
+        emailConducteur: (() => {
+            const filterEl = document.getElementById('pvFilterEmailConducteur');
+            if (!filterEl) return [];
+            const val = filterEl.value;
+            return Array.isArray(val) ? val.map(v => v.trim()).filter(v => v) : [];
+        })(),
         dateReception: document.getElementById('pvFilterDateReception')?.value || '',
         dateRetour: document.getElementById('pvFilterDateRetour')?.value || ''
+    };
+    
+    // Fonction helper pour vérifier si un PV correspond au filtre email conducteur (multiple)
+    const checkEmailConducteurMatch = (pv) => {
+        if (currentFilters.emailConducteur.length === 0) return true;
+        
+        const pvEmails = [];
+        if (Array.isArray(pv.email_conducteur)) {
+            pvEmails.push(...pv.email_conducteur.map(e => e.trim().toLowerCase()).filter(e => e));
+        } else if (pv.email_conducteur && typeof pv.email_conducteur === 'string') {
+            pvEmails.push(...pv.email_conducteur.split(',').map(e => e.trim().toLowerCase()).filter(e => e));
+        }
+        
+        return currentFilters.emailConducteur.some(filterEmail => 
+            pvEmails.includes(filterEmail.toLowerCase())
+        );
     };
     
     // Calculer les dates de référence
@@ -2278,15 +2360,9 @@ function populateFilterDropdowns(pvs) {
             (pv.responsable || '').trim().toLowerCase() === currentFilters.responsable.toLowerCase();
         const matchesFournisseur = !currentFilters.fournisseur || 
             (pv.fournisseur || '').trim().toLowerCase() === currentFilters.fournisseur.toLowerCase();
-        const matchesEmailConducteur = !currentFilters.emailConducteur || (() => {
-            // Gérer le cas où email_conducteur est un tableau
-            if (Array.isArray(pv.email_conducteur)) {
-                return pv.email_conducteur.some(email => 
-                    email && email.trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase()
-                );
-            }
-            return (pv.email_conducteur || '').trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase();
-        })();
+        
+        // Gérer le filtre email conducteur multiple
+        const matchesEmailConducteur = checkEmailConducteurMatch(pv);
         
         // Vérifier le filtre date réception avec périodes
         let matchesDateReception = true;
@@ -2471,22 +2547,13 @@ function populateFilterDropdowns(pvs) {
         if (pv.chantier && pv.chantier.trim()) {
             const val = pv.chantier.trim();
             const matchesChantier = val.toLowerCase() === pv.chantier.trim().toLowerCase();
-            const matchesMaterielType = !currentFilters.materielType || 
-                (pv.materiel_type || '').trim().toLowerCase() === currentFilters.materielType.toLowerCase();
-            const matchesResponsable = !currentFilters.responsable || 
-                (pv.responsable || '').trim().toLowerCase() === currentFilters.responsable.toLowerCase();
-            const matchesFournisseur = !currentFilters.fournisseur || 
-                (pv.fournisseur || '').trim().toLowerCase() === currentFilters.fournisseur.toLowerCase();
-            const matchesEmailConducteur = !currentFilters.emailConducteur || (() => {
-                if (Array.isArray(pv.email_conducteur)) {
-                    return pv.email_conducteur.some(email => 
-                        email && email.trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase()
-                    );
-                }
-                return (pv.email_conducteur || '').trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase();
-            })();
-            
-            if (matchesLastSent && matchesCompletion && matchesChantier && matchesMaterielType && 
+        const matchesMaterielType = !currentFilters.materielType || 
+            (pv.materiel_type || '').trim().toLowerCase() === currentFilters.materielType.toLowerCase();
+        const matchesResponsable = !currentFilters.responsable || 
+            (pv.responsable || '').trim().toLowerCase() === currentFilters.responsable.toLowerCase();
+        const matchesFournisseur = !currentFilters.fournisseur || 
+            (pv.fournisseur || '').trim().toLowerCase() === currentFilters.fournisseur.toLowerCase();
+        const matchesEmailConducteur = checkEmailConducteurMatch(pv);            if (matchesLastSent && matchesCompletion && matchesChantier && matchesMaterielType && 
                 matchesResponsable && matchesFournisseur && matchesEmailConducteur &&
                 matchesDateReception && matchesDateRetour) {
                 chantierCount.set(val, (chantierCount.get(val) || 0) + 1);
@@ -2503,14 +2570,7 @@ function populateFilterDropdowns(pvs) {
                 (pv.responsable || '').trim().toLowerCase() === currentFilters.responsable.toLowerCase();
             const matchesFournisseur = !currentFilters.fournisseur || 
                 (pv.fournisseur || '').trim().toLowerCase() === currentFilters.fournisseur.toLowerCase();
-            const matchesEmailConducteur = !currentFilters.emailConducteur || (() => {
-                if (Array.isArray(pv.email_conducteur)) {
-                    return pv.email_conducteur.some(email => 
-                        email && email.trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase()
-                    );
-                }
-                return (pv.email_conducteur || '').trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase();
-            })();
+            const matchesEmailConducteur = checkEmailConducteurMatch(pv);
             
             if (matchesLastSent && matchesCompletion && matchesChantier && matchesMaterielType &&
                 matchesResponsable && matchesFournisseur && matchesEmailConducteur &&
@@ -2529,14 +2589,7 @@ function populateFilterDropdowns(pvs) {
                 (pv.materiel_type || '').trim().toLowerCase() === currentFilters.materielType.toLowerCase();
             const matchesFournisseur = !currentFilters.fournisseur || 
                 (pv.fournisseur || '').trim().toLowerCase() === currentFilters.fournisseur.toLowerCase();
-            const matchesEmailConducteur = !currentFilters.emailConducteur || (() => {
-                if (Array.isArray(pv.email_conducteur)) {
-                    return pv.email_conducteur.some(email => 
-                        email && email.trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase()
-                    );
-                }
-                return (pv.email_conducteur || '').trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase();
-            })();
+            const matchesEmailConducteur = checkEmailConducteurMatch(pv);
             
             if (matchesLastSent && matchesCompletion && matchesChantier && matchesMaterielType && 
                 matchesFournisseur && matchesEmailConducteur &&
@@ -2555,14 +2608,7 @@ function populateFilterDropdowns(pvs) {
                 (pv.materiel_type || '').trim().toLowerCase() === currentFilters.materielType.toLowerCase();
             const matchesResponsable = !currentFilters.responsable || 
                 (pv.responsable || '').trim().toLowerCase() === currentFilters.responsable.toLowerCase();
-            const matchesEmailConducteur = !currentFilters.emailConducteur || (() => {
-                if (Array.isArray(pv.email_conducteur)) {
-                    return pv.email_conducteur.some(email => 
-                        email && email.trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase()
-                    );
-                }
-                return (pv.email_conducteur || '').trim().toLowerCase() === currentFilters.emailConducteur.toLowerCase();
-            })();
+            const matchesEmailConducteur = checkEmailConducteurMatch(pv);
             
             if (matchesLastSent && matchesCompletion && matchesChantier && matchesMaterielType && 
                 matchesResponsable && matchesFournisseur && matchesEmailConducteur &&
@@ -2652,14 +2698,7 @@ function populateFilterDropdowns(pvs) {
             (pv.responsable || '').trim() === currentFilters.responsable;
         const matchesFournisseur = !currentFilters.fournisseur || 
             (pv.fournisseur || '').trim() === currentFilters.fournisseur;
-        const matchesEmailConducteur = !currentFilters.emailConducteur || (() => {
-            if (Array.isArray(pv.email_conducteur)) {
-                return pv.email_conducteur.some(email => 
-                    email && email.trim() === currentFilters.emailConducteur
-                );
-            }
-            return (pv.email_conducteur || '').trim() === currentFilters.emailConducteur;
-        })();
+        const matchesEmailConducteur = checkEmailConducteurMatch(pv);
         
         // Compter pour complétion (exclure filtre complétion)
         if (matchesChantier && matchesMaterielType && matchesResponsable && 
@@ -2934,37 +2973,48 @@ function updateFilterCount(count) {
  * @param {string} pvId - L'ID du PV à charger
  * @param {boolean} silent - Si true, ne pas afficher de notification
  */
+/**
+ * Réinitialise complètement le formulaire PV
+ */
+function resetForm() {
+    // Nettoyer le formulaire
+    document.getElementById('pvForm').reset();
+    
+    // Effacer les signatures
+    if (signaturePadReception) signaturePadReception.clear();
+    if (signaturePadRetour) signaturePadRetour.clear();
+    
+    // Nettoyer toutes les photos
+    const photoContainers = document.querySelectorAll('.multi-photo-container');
+    photoContainers.forEach(container => {
+        const photoItems = container.querySelectorAll('.photo-item');
+        photoItems.forEach(item => item.remove());
+    });
+    
+    // Réinitialiser les sliders de carburant à 0
+    const carburantReception = document.getElementById('carburant_reception');
+    const carburantRetour = document.getElementById('carburant_retour');
+    if (carburantReception) {
+        carburantReception.value = '0';
+        const valueDisplay = document.getElementById('carburant_reception_value');
+        if (valueDisplay) valueDisplay.textContent = '0%';
+    }
+    if (carburantRetour) {
+        carburantRetour.value = '0';
+        const valueDisplay = document.getElementById('carburant_retour_value');
+        if (valueDisplay) valueDisplay.textContent = '0%';
+    }
+}
+
+/**
+ * Charge un PV existant par son ID
+ */
 async function loadPVById(pvId, silent = false) {
     if (!pvId) return;
     
     try {
         // Nettoyer complètement le formulaire avant de charger les nouvelles données
-        document.getElementById('pvForm').reset();
-        
-        // Effacer les signatures
-        if (signaturePadReception) signaturePadReception.clear();
-        if (signaturePadRetour) signaturePadRetour.clear();
-        
-        // Nettoyer toutes les photos
-        const photoContainers = document.querySelectorAll('.multi-photo-container');
-        photoContainers.forEach(container => {
-            const photoItems = container.querySelectorAll('.photo-item');
-            photoItems.forEach(item => item.remove());
-        });
-        
-        // Réinitialiser les sliders de carburant à 0
-        const carburantReception = document.getElementById('carburant_reception');
-        const carburantRetour = document.getElementById('carburant_retour');
-        if (carburantReception) {
-            carburantReception.value = '0';
-            const valueDisplay = document.getElementById('carburant_reception_value');
-            if (valueDisplay) valueDisplay.textContent = '0%';
-        }
-        if (carburantRetour) {
-            carburantRetour.value = '0';
-            const valueDisplay = document.getElementById('carburant_retour_value');
-            if (valueDisplay) valueDisplay.textContent = '0%';
-        }
+        resetForm();
         
         const response = await fetch(`/load-pv/${pvId}`);
         const data = await response.json();
@@ -2974,11 +3024,33 @@ async function loadPVById(pvId, silent = false) {
             currentPVId = pvData.id;
             pvStatus = pvData.status || 'draft';
             
+            // Sauvegarder l'ID du PV actuel dans localStorage pour le restaurer après rafraîchissement
+            localStorage.setItem('currentPVId', currentPVId);
+            
             // Stocker les données du PV pour y accéder dans updatePVStatusBadge
             window.currentPVData = pvData;
             
             // Remplir le formulaire avec les nouvelles données
             populateForm(pvData.form_data);
+            
+            // Charger les données VGP
+            const vgpDateInput = document.getElementById('vgp_date');
+            if (vgpDateInput && pvData.vgp_date) {
+                vgpDateInput.value = pvData.vgp_date;
+            }
+            
+            // Afficher le lien du document VGP si présent
+            const vgpDocLink = document.getElementById('vgp_document_link');
+            const vgpDocCurrent = document.getElementById('vgp_document_current');
+            if (vgpDocLink && vgpDocCurrent && pvData.vgp_document_path) {
+                vgpDocLink.href = `/vgp-document/${pvData.id}`;
+                vgpDocCurrent.style.display = 'block';
+            } else if (vgpDocCurrent) {
+                vgpDocCurrent.style.display = 'none';
+            }
+            
+            // Mettre à jour l'indicateur VGP
+            updateVGPIndicator();
             
             // Effacer la sauvegarde automatique car on charge un PV sauvegardé
             localStorage.removeItem('pvMaterielFormData');
@@ -2990,6 +3062,9 @@ async function loadPVById(pvId, silent = false) {
             if (!silent) {
                 showNotification('success', `PV "${pvData.chantier}" chargé avec succès`);
             }
+            
+            // Charger les versions disponibles pour ce PV
+            await loadPVVersions(pvData.id);
             
             // Mettre à jour la sélection visuelle
             await loadSavedPVList();
@@ -3012,34 +3087,8 @@ async function deletePVById(pvId) {
     const card = document.querySelector(`.pv-card[data-pv-id="${pvId}"]`);
     const pvName = card ? card.querySelector('.pv-card-title').textContent.trim() : 'ce PV';
     
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer ${pvName} ?`)) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/delete-pv/${pvId}`, {
-            method: 'DELETE'
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showNotification('success', data.message);
-            
-            // Si c'était le PV actuel, créer un nouveau
-            if (currentPVId === pvId) {
-                createNewPV();
-            }
-            
-            // Recharger la liste
-            await loadSavedPVList();
-        } else {
-            showNotification('danger', data.message);
-        }
-    } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
-        showNotification('danger', 'Erreur lors de la suppression du PV');
-    }
+    // Utiliser le modal avec mot de passe au lieu de confirm()
+    requestDeletePV(pvId, `<strong>Chantier :</strong> ${pvName}`);
 }
 
 /**
@@ -3183,6 +3232,14 @@ async function savePVDraft(eventOrSilent) {
             
             updatePVStatusBadge();
             
+            // Uploader le document VGP s'il y en a un
+            const vgpDocInput = document.getElementById('vgp_document');
+            if (vgpDocInput && vgpDocInput.files.length > 0) {
+                await uploadVGPDocument(currentPVId, vgpDocInput.files[0]);
+                // Réinitialiser l'input pour permettre un nouvel upload
+                vgpDocInput.value = '';
+            }
+            
             // Effacer la sauvegarde automatique locale car les données sont maintenant sauvegardées
             localStorage.removeItem('pvMaterielFormData');
             
@@ -3193,6 +3250,9 @@ async function savePVDraft(eventOrSilent) {
             
             // Recharger la liste
             await loadSavedPVList();
+            
+            // Vérifier les alertes VGP
+            await checkVGPAlerts();
             
             // Sélectionner le PV dans la liste
             const select = document.getElementById('savedPVSelect');
@@ -3743,16 +3803,11 @@ function updatePVStatusBadge() {
             }
         }
         
-        const sentInfo = lastSentDate ? 
-            `<span class="badge bg-info ms-2"><i class="fas fa-paper-plane me-1"></i>Envoyé le ${formatDateTimeFr(lastSentDate)}</span>` : 
-            '';
-        
         statusDiv.innerHTML = `<strong><i class="fas fa-file-signature me-2"></i>PV ${typeLabel} - ${chantierDisplay}</strong>`;
         detailsDiv.innerHTML = `
             <div class="d-flex align-items-center gap-1 flex-wrap">
                 ${criticalBadge}
                 ${signatureBadge}
-                ${sentInfo}
             </div>
         `;
     }
@@ -4125,10 +4180,10 @@ async function testSmtpConfig() {
  */
 
 /**
- * Initialise les champs Select2 avec les données de l'historique
+ * Initialise les champs Select2 avec les données de l'historique et de la base de données
  */
 function initializeSelect2Fields() {
-    // Configuration des données factices pour chaque champ
+    // Extraire les valeurs uniques depuis les PV de la base de données
     const fieldData = {
         'chantier': [],
         'email_conducteur': [],
@@ -4139,6 +4194,62 @@ function initializeSelect2Fields() {
         'responsable': []
     };
     
+    // Remplir avec les données des PV existants
+    if (allPVData && allPVData.length > 0) {
+        allPVData.forEach(pv => {
+            // Chantier
+            if (pv.chantier && pv.chantier.trim()) {
+                fieldData['chantier'].push(pv.chantier.trim());
+            }
+            
+            // Email conducteur (peut être string ou array)
+            if (pv.email_conducteur) {
+                if (Array.isArray(pv.email_conducteur)) {
+                    pv.email_conducteur.forEach(email => {
+                        if (email && email.trim()) fieldData['email_conducteur'].push(email.trim());
+                    });
+                } else if (typeof pv.email_conducteur === 'string') {
+                    // Peut contenir plusieurs emails séparés par virgule
+                    pv.email_conducteur.split(',').forEach(email => {
+                        if (email && email.trim()) fieldData['email_conducteur'].push(email.trim());
+                    });
+                }
+            }
+            
+            // Email entreprise
+            if (pv.email_entreprise && pv.email_entreprise.trim()) {
+                fieldData['email_entreprise'].push(pv.email_entreprise.trim());
+            }
+            
+            // Matériel numéro
+            if (pv.materiel_numero && pv.materiel_numero.trim()) {
+                fieldData['materiel_numero'].push(pv.materiel_numero.trim());
+            }
+            
+            // Matériel type
+            if (pv.materiel_type && pv.materiel_type.trim()) {
+                fieldData['materiel_type'].push(pv.materiel_type.trim());
+            }
+            
+            // Fournisseur
+            if (pv.fournisseur && pv.fournisseur.trim()) {
+                fieldData['fournisseur'].push(pv.fournisseur.trim());
+            }
+            
+            // Responsable
+            if (pv.responsable && pv.responsable.trim()) {
+                fieldData['responsable'].push(pv.responsable.trim());
+            }
+        });
+        
+        // Supprimer les doublons et trier
+        Object.keys(fieldData).forEach(key => {
+            fieldData[key] = [...new Set(fieldData[key])].sort((a, b) => 
+                a.toLowerCase().localeCompare(b.toLowerCase())
+            );
+        });
+    }
+    
     // Initialiser chaque champ Select2
     HISTORY_FIELDS.forEach(fieldId => {
         const $field = $(`#${fieldId}`);
@@ -4147,9 +4258,9 @@ function initializeSelect2Fields() {
         // Charger les données de l'historique localStorage
         const historyData = getFieldHistory(fieldId);
         
-        // Combiner les données factices avec l'historique (sans doublons)
-        const dummyData = fieldData[fieldId] || [];
-        const allData = [...new Set([...historyData, ...dummyData])];
+        // Combiner les données de la DB avec l'historique (sans doublons)
+        const dbData = fieldData[fieldId] || [];
+        const allData = [...new Set([...dbData, ...historyData])];
         
         // Ajouter les options au select
         allData.forEach(value => {
@@ -4164,6 +4275,111 @@ function initializeSelect2Fields() {
         // Charger la valeur par défaut pour email_entreprise
         if (fieldId === 'email_entreprise' && historyData.length > 0) {
             $field.val(historyData[0]).trigger('change');
+        }
+    });
+}
+
+/**
+ * Met à jour les options Select2 depuis la base de données sans réinitialiser les valeurs
+ */
+function updateSelect2FieldsFromDB() {
+    // Extraire les valeurs uniques depuis les PV de la base de données
+    const fieldData = {
+        'chantier': [],
+        'email_conducteur': [],
+        'email_entreprise': [],
+        'materiel_numero': [],
+        'materiel_type': [],
+        'fournisseur': [],
+        'responsable': []
+    };
+    
+    // Remplir avec les données des PV existants
+    if (allPVData && allPVData.length > 0) {
+        allPVData.forEach(pv => {
+            // Chantier
+            if (pv.chantier && pv.chantier.trim()) {
+                fieldData['chantier'].push(pv.chantier.trim());
+            }
+            
+            // Email conducteur (peut être string ou array)
+            if (pv.email_conducteur) {
+                if (Array.isArray(pv.email_conducteur)) {
+                    pv.email_conducteur.forEach(email => {
+                        if (email && email.trim()) fieldData['email_conducteur'].push(email.trim());
+                    });
+                } else if (typeof pv.email_conducteur === 'string') {
+                    // Peut contenir plusieurs emails séparés par virgule
+                    pv.email_conducteur.split(',').forEach(email => {
+                        if (email && email.trim()) fieldData['email_conducteur'].push(email.trim());
+                    });
+                }
+            }
+            
+            // Email entreprise
+            if (pv.email_entreprise && pv.email_entreprise.trim()) {
+                fieldData['email_entreprise'].push(pv.email_entreprise.trim());
+            }
+            
+            // Matériel numéro
+            if (pv.materiel_numero && pv.materiel_numero.trim()) {
+                fieldData['materiel_numero'].push(pv.materiel_numero.trim());
+            }
+            
+            // Matériel type
+            if (pv.materiel_type && pv.materiel_type.trim()) {
+                fieldData['materiel_type'].push(pv.materiel_type.trim());
+            }
+            
+            // Fournisseur
+            if (pv.fournisseur && pv.fournisseur.trim()) {
+                fieldData['fournisseur'].push(pv.fournisseur.trim());
+            }
+            
+            // Responsable
+            if (pv.responsable && pv.responsable.trim()) {
+                fieldData['responsable'].push(pv.responsable.trim());
+            }
+        });
+        
+        // Supprimer les doublons et trier
+        Object.keys(fieldData).forEach(key => {
+            fieldData[key] = [...new Set(fieldData[key])].sort((a, b) => 
+                a.toLowerCase().localeCompare(b.toLowerCase())
+            );
+        });
+    }
+    
+    // Mettre à jour chaque champ Select2
+    HISTORY_FIELDS.forEach(fieldId => {
+        const $field = $(`#${fieldId}`);
+        if ($field.length === 0 || !$field.hasClass('select2-hidden-accessible')) return;
+        
+        // Sauvegarder la valeur actuelle
+        const currentValue = $field.val();
+        
+        // Récupérer toutes les options existantes
+        const existingOptions = [];
+        $field.find('option').each(function() {
+            const val = $(this).val();
+            if (val) existingOptions.push(val);
+        });
+        
+        // Combiner avec les nouvelles données de la DB
+        const dbData = fieldData[fieldId] || [];
+        const allOptions = [...new Set([...dbData, ...existingOptions])];
+        
+        // Vider et repeupler les options
+        $field.empty();
+        allOptions.forEach(value => {
+            if (value && value.trim()) {
+                $field.append(new Option(value, value, false, false));
+            }
+        });
+        
+        // Restaurer la valeur
+        if (currentValue) {
+            $field.val(currentValue).trigger('change.select2');
         }
     });
 }
@@ -4199,78 +4415,8 @@ function initSingleSelect2Field($field, fieldId, fieldData) {
                 return data.text;
             }
             
-            // Vérifier si l'option est actuellement sélectionnée
-            const currentValues = $field.val() || [];
-            const isSelected = Array.isArray(currentValues) ? currentValues.includes(data.id) : currentValues === data.id;
-            
-            // Créer l'élément avec un bouton de suppression
-            const $result = $('<span class="select2-result-item"></span>');
-            const $text = $('<span class="select2-result-text"></span>').text(data.text);
-            const $deleteBtn = $('<button class="select2-delete-btn" type="button" title="Supprimer"><i class="fas fa-times"></i></button>');
-            
-            // Ajouter une classe si l'option est sélectionnée
-            if (isSelected) {
-                $result.addClass('select2-result-selected');
-            }
-            
-            // Utiliser mousedown pour intercepter avant le clic de Select2
-            $deleteBtn.on('mousedown', function(e) {
-                e.stopPropagation();
-                e.preventDefault();
-                
-                const valueToDelete = data.text;
-                
-                // Empêcher la fermeture du dropdown temporairement
-                let preventClose = true;
-                const preventClosing = function(e) {
-                    if (preventClose) {
-                        e.preventDefault();
-                    }
-                };
-                
-                $field.on('select2:closing', preventClosing);
-                
-                // Supprimer de l'historique
-                deleteFromFieldHistory(fieldId, valueToDelete);
-                
-                // Sauvegarder la valeur actuelle
-                const currentVal = $field.val();
-                
-                // Supprimer l'option du DOM
-                $field.find(`option`).filter(function() {
-                    return $(this).val() === valueToDelete;
-                }).remove();
-                
-                // Restaurer la valeur si elle n'a pas été supprimée
-                if (currentVal !== valueToDelete) {
-                    $field.val(currentVal);
-                }
-                
-                // Supprimer visuellement l'élément du dropdown
-                $(e.target).closest('.select2-results__option').fadeOut(150, function() {
-                    $(this).remove();
-                    
-                    // Réactiver la fermeture normale après l'animation
-                    setTimeout(() => {
-                        preventClose = false;
-                        $field.off('select2:closing', preventClosing);
-                    }, 50);
-                });
-                
-                return false;
-            });
-            
-            // Empêcher aussi le click
-            $deleteBtn.on('click', function(e) {
-                e.stopPropagation();
-                e.preventDefault();
-                return false;
-            });
-            
-            $result.append($text);
-            $result.append($deleteBtn);
-            
-            return $result;
+            // Retourner simplement le texte sans bouton de suppression
+            return data.text;
         }
     });
     
@@ -4637,18 +4783,12 @@ function openPhotoModal(fieldName) {
     // Déterminer le type de PV actif (réception ou retour)
     const pvType = document.querySelector('input[name="pv_type"]:checked')?.value || 'reception';
     
-    // Trouver l'input file correspondant
-    const containerId = `photos_${fieldName}_${pvType}`;
-    const container = document.getElementById(containerId);
+    // Trouver l'input file correspondant directement par son ID
+    const inputId = `photo_${fieldName}_${pvType}`;
+    const fileInput = document.getElementById(inputId);
     
-    if (!container) {
-        console.error(`Container ${containerId} not found`);
-        return;
-    }
-    
-    const fileInput = container.querySelector('.photo-upload');
     if (!fileInput) {
-        console.error(`File input not found in ${containerId}`);
+        console.error(`File input ${inputId} not found`);
         return;
     }
     
@@ -4707,4 +4847,913 @@ function updatePhotoPreview(fieldName, pvType) {
     addPreviews(retourContainer, 'retour');
 }
 
+// ============================================================================
+// GESTION VGP (Vérification Générale Périodique)
+// ============================================================================
 
+/**
+ * Upload du document VGP
+ */
+async function uploadVGPDocument(pvId, file) {
+    if (!pvId || !file) return false;
+    
+    try {
+        const formData = new FormData();
+        formData.append('vgp_document', file);
+        
+        const response = await fetch(`/upload-vgp-document/${pvId}`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Afficher le lien du document
+            const vgpDocLink = document.getElementById('vgp_document_link');
+            const vgpDocCurrent = document.getElementById('vgp_document_current');
+            if (vgpDocLink && vgpDocCurrent) {
+                vgpDocLink.href = `/vgp-document/${pvId}`;
+                vgpDocCurrent.style.display = 'block';
+            }
+            return true;
+        } else {
+            console.error('Erreur upload VGP:', data.message);
+            return false;
+        }
+    } catch (error) {
+        console.error('Erreur lors de l\'upload du document VGP:', error);
+        return false;
+    }
+}
+
+/**
+ * Calcule le statut VGP basé sur la date
+ * @param {string} vgpDate - Date au format YYYY-MM-DD
+ * @returns {object} - {status: 'valid'|'warning'|'expired'|'none', daysRemaining: number, expiryDate: Date}
+ */
+function calculateVGPStatus(vgpDate) {
+    if (!vgpDate) {
+        return { status: 'none', daysRemaining: null, expiryDate: null };
+    }
+    
+    const vgp = new Date(vgpDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // VGP valide 6 mois (180 jours)
+    const expiryDate = new Date(vgp);
+    expiryDate.setDate(expiryDate.getDate() + 180);
+    
+    // Alerte 3 semaines avant (21 jours)
+    const warningDate = new Date(expiryDate);
+    warningDate.setDate(warningDate.getDate() - 21);
+    
+    const daysRemaining = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+    
+    if (today > expiryDate) {
+        return { status: 'expired', daysRemaining, expiryDate };
+    } else if (today >= warningDate) {
+        return { status: 'warning', daysRemaining, expiryDate };
+    } else {
+        return { status: 'valid', daysRemaining, expiryDate };
+    }
+}
+
+/**
+ * Met à jour l'indicateur visuel VGP
+ */
+function updateVGPIndicator() {
+    const vgpDateInput = document.getElementById('vgp_date');
+    const badge = document.getElementById('vgp_status_badge');
+    const nextDateSpan = document.getElementById('vgp_next_date');
+    
+    if (!vgpDateInput || !badge || !nextDateSpan) return;
+    
+    const vgpDate = vgpDateInput.value;
+    const vgpStatus = calculateVGPStatus(vgpDate);
+    
+    // Masquer le badge si pas de date
+    if (vgpStatus.status === 'none') {
+        badge.style.display = 'none';
+        nextDateSpan.textContent = '';
+        return;
+    }
+    
+    // Afficher et mettre à jour le badge
+    badge.style.display = 'inline-block';
+    badge.className = 'badge vgp-status-badge';
+    
+    const expiryDateStr = vgpStatus.expiryDate.toLocaleDateString('fr-FR');
+    
+    switch (vgpStatus.status) {
+        case 'valid':
+            badge.classList.add('bg-success');
+            badge.innerHTML = '<i class="fas fa-check-circle"></i> Contrôle à jour';
+            nextDateSpan.textContent = `Valide jusqu'au ${expiryDateStr} (${vgpStatus.daysRemaining} jours restants)`;
+            nextDateSpan.className = 'text-success small';
+            break;
+        case 'warning':
+            badge.classList.add('bg-warning', 'text-dark');
+            badge.innerHTML = '<i class="fas fa-exclamation-triangle"></i> À renouveler';
+            nextDateSpan.textContent = `Échéance le ${expiryDateStr} (${vgpStatus.daysRemaining} jours restants)`;
+            nextDateSpan.className = 'text-warning small';
+            break;
+        case 'expired':
+            badge.classList.add('bg-danger');
+            badge.innerHTML = '<i class="fas fa-times-circle"></i> Contrôle échu';
+            nextDateSpan.textContent = `Échu depuis ${Math.abs(vgpStatus.daysRemaining)} jours (échéance : ${expiryDateStr})`;
+            nextDateSpan.className = 'text-danger small fw-bold';
+            break;
+    }
+}
+
+/**
+ * Initialise la gestion VGP
+ */
+function initializeVGP() {
+    const vgpDateInput = document.getElementById('vgp_date');
+    const vgpAdminBtn = document.getElementById('vgpAdminBtn');
+    const vgpAlertViewBtn = document.getElementById('vgpAlertViewBtn');
+    
+    // Écouter les changements de date VGP
+    if (vgpDateInput) {
+        vgpDateInput.addEventListener('change', updateVGPIndicator);
+    }
+    
+    // Bouton administration VGP
+    if (vgpAdminBtn) {
+        vgpAdminBtn.addEventListener('click', openVGPAdminModal);
+    }
+    
+    // Bouton "Voir les détails" dans l'alerte
+    if (vgpAlertViewBtn) {
+        vgpAlertViewBtn.addEventListener('click', openVGPAdminModal);
+    }
+}
+
+/**
+ * Vérifie et affiche les alertes VGP au chargement
+ */
+async function checkVGPAlerts() {
+    try {
+        const response = await fetch('/list-pv');
+        const data = await response.json();
+        
+        if (!data.success) return;
+        
+        const pvList = data.pv_list;
+        
+        // Compter les VGP échues et à renouveler
+        let expiredCount = 0;
+        let warningCount = 0;
+        
+        pvList.forEach(pv => {
+            const vgpStatus = calculateVGPStatus(pv.vgp_date);
+            if (vgpStatus.status === 'expired') {
+                expiredCount++;
+            } else if (vgpStatus.status === 'warning') {
+                warningCount++;
+            }
+        });
+        
+        // Afficher l'alerte si nécessaire
+        const alertBanner = document.getElementById('vgpAlertBanner');
+        const alertTitle = document.getElementById('vgpAlertTitle');
+        const alertMessage = document.getElementById('vgpAlertMessage');
+        
+        if (!alertBanner || !alertTitle || !alertMessage) return;
+        
+        if (expiredCount > 0) {
+            // Alerte critique (rouge)
+            alertBanner.className = 'alert alert-danger alert-dismissible fade show mb-3';
+            alertBanner.style.borderLeft = '5px solid #dc3545';
+            alertTitle.innerHTML = '<i class="fas fa-exclamation-circle"></i> Alerte VGP Critique !';
+            alertMessage.innerHTML = `<strong>${expiredCount}</strong> contrôle(s) VGP échu(s) ! ` +
+                (warningCount > 0 ? `Et <strong>${warningCount}</strong> à renouveler sous 3 semaines.` : '') +
+                ` <strong>Action requise immédiatement.</strong>`;
+            alertBanner.style.display = 'block';
+        } else if (warningCount > 0) {
+            // Alerte importante (orange)
+            alertBanner.className = 'alert alert-warning alert-dismissible fade show mb-3';
+            alertBanner.style.borderLeft = '5px solid #ffc107';
+            alertTitle.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Attention : VGP à renouveler';
+            alertMessage.innerHTML = `<strong>${warningCount}</strong> contrôle(s) VGP à renouveler dans les 3 prochaines semaines.`;
+            alertBanner.style.display = 'block';
+        } else {
+            // Pas d'alerte
+            alertBanner.style.display = 'none';
+        }
+        
+        // Mettre à jour le badge du bouton Administration VGP
+        const vgpAdminBtn = document.getElementById('vgpAdminBtn');
+        if (vgpAdminBtn && (expiredCount > 0 || warningCount > 0)) {
+            const totalAlerts = expiredCount + warningCount;
+            vgpAdminBtn.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Administration VGP <span class="badge bg-danger ms-1">${totalAlerts}</span>`;
+        }
+        
+    } catch (error) {
+        console.error('Erreur lors de la vérification des alertes VGP:', error);
+    }
+}
+
+/**
+ * Ouvre le modal d'administration VGP
+ */
+async function openVGPAdminModal() {
+    const modal = new bootstrap.Modal(document.getElementById('vgpAdminModal'));
+    
+    try {
+        // Charger tous les PV
+        const response = await fetch('/list-pv');
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.message || 'Erreur lors du chargement');
+        }
+        
+        const pvList = data.pv_list;
+        
+        // Catégoriser les PV par statut VGP
+        const categories = {
+            expired: [],
+            warning: [],
+            valid: [],
+            none: []
+        };
+        
+        pvList.forEach(pv => {
+            const vgpStatus = calculateVGPStatus(pv.vgp_date);
+            categories[vgpStatus.status].push({ pv, vgpStatus });
+        });
+        
+        // Remplir les tableaux
+        populateVGPTable('vgpExpiredList', categories.expired, 'expired');
+        populateVGPTable('vgpWarningList', categories.warning, 'warning');
+        populateVGPTable('vgpValidList', categories.valid, 'valid');
+        populateVGPTable('vgpNoneList', categories.none, 'none');
+        
+        // Mettre à jour les compteurs
+        document.getElementById('vgpExpiredCount').textContent = categories.expired.length;
+        document.getElementById('vgpWarningCount').textContent = categories.warning.length;
+        document.getElementById('vgpValidCount').textContent = categories.valid.length;
+        document.getElementById('vgpNoneCount').textContent = categories.none.length;
+        
+        modal.show();
+    } catch (error) {
+        console.error('Erreur lors du chargement des PV VGP:', error);
+        alert('Erreur lors du chargement des données VGP');
+    }
+}
+
+/**
+ * Remplit un tableau VGP
+ */
+function populateVGPTable(tableId, items, type) {
+    const tbody = document.getElementById(tableId);
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (items.length === 0) {
+        const row = tbody.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = type === 'none' ? 6 : 8;
+        cell.className = 'text-center text-muted py-3';
+        cell.innerHTML = '<i class="fas fa-inbox"></i> Aucun PV dans cette catégorie';
+        return;
+    }
+    
+    items.forEach(({ pv, vgpStatus }) => {
+        const row = tbody.insertRow();
+        row.className = 'align-middle';
+        
+        // Chantier
+        row.insertCell().textContent = pv.chantier || '-';
+        
+        // Matériel
+        row.insertCell().textContent = pv.materiel_type || '-';
+        
+        // N° Série
+        row.insertCell().textContent = pv.materiel_numero || '-';
+        
+        // Fournisseur
+        row.insertCell().textContent = pv.fournisseur || '-';
+        
+        if (type === 'none') {
+            // Date Réception
+            row.insertCell().textContent = pv.date_reception ? new Date(pv.date_reception).toLocaleDateString('fr-FR') : '-';
+        } else {
+            // Date VGP
+            const vgpDateCell = row.insertCell();
+            vgpDateCell.textContent = pv.vgp_date ? new Date(pv.vgp_date).toLocaleDateString('fr-FR') : '-';
+            
+            // Statut
+            const statusCell = row.insertCell();
+            if (vgpStatus.expiryDate) {
+                const expiryStr = vgpStatus.expiryDate.toLocaleDateString('fr-FR');
+                const days = Math.abs(vgpStatus.daysRemaining);
+                
+                switch (type) {
+                    case 'expired':
+                        statusCell.innerHTML = `<span class="text-danger fw-bold">Depuis ${days} jours</span>`;
+                        break;
+                    case 'warning':
+                        statusCell.innerHTML = `<span class="text-warning fw-bold">${days} jours</span>`;
+                        break;
+                    case 'valid':
+                        statusCell.textContent = expiryStr;
+                        break;
+                }
+            }
+            
+            // Document
+            const docCell = row.insertCell();
+            if (pv.vgp_document_path) {
+                docCell.innerHTML = `<a href="/vgp-document/${pv.id}" target="_blank" class="btn btn-sm btn-outline-danger">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </a>`;
+            } else {
+                docCell.innerHTML = '<span class="text-muted">-</span>';
+            }
+        }
+        
+        // Actions
+        const actionsCell = row.insertCell();
+        actionsCell.innerHTML = `
+            <button class="btn btn-sm btn-outline-primary" onclick="loadPVById('${pv.id}')">
+                <i class="fas fa-edit"></i> Modifier
+            </button>
+        `;
+    });
+}
+
+/**
+ * ID du PV à supprimer (variable globale pour le modal)
+ */
+let pendingDeletePVId = null;
+
+/**
+ * Demande de suppression avec mot de passe
+ */
+function requestDeletePV(pvId, pvInfo) {
+    pendingDeletePVId = pvId;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deletePasswordModal'));
+    const infoElem = document.getElementById('deletePVInfo');
+    const errorElem = document.getElementById('deletePasswordError');
+    const passwordInput = document.getElementById('deletePassword');
+    
+    // Afficher les infos du PV
+    if (infoElem) {
+        infoElem.innerHTML = `<strong>PV à supprimer :</strong><br>${pvInfo}`;
+    }
+    
+    // Réinitialiser
+    if (errorElem) {
+        errorElem.classList.add('d-none');
+        errorElem.textContent = '';
+    }
+    if (passwordInput) {
+        passwordInput.value = '';
+    }
+    
+    modal.show();
+}
+
+/**
+ * Confirme la suppression après vérification du mot de passe
+ */
+async function confirmDeletePV() {
+    const passwordInput = document.getElementById('deletePassword');
+    const errorElem = document.getElementById('deletePasswordError');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    
+    if (!passwordInput || !pendingDeletePVId) return;
+    
+    const password = passwordInput.value.trim();
+    
+    // Vérifier le mot de passe
+    if (password !== 'FMO') {
+        if (errorElem) {
+            errorElem.textContent = 'Mot de passe incorrect. Veuillez réessayer.';
+            errorElem.classList.remove('d-none');
+        }
+        passwordInput.value = '';
+        passwordInput.focus();
+        return;
+    }
+    
+    // Mot de passe correct, supprimer le PV
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Suppression...';
+    }
+    
+    try {
+        const response = await fetch(`/delete-pv/${pendingDeletePVId}`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            // Fermer le modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deletePasswordModal'));
+            if (modal) modal.hide();
+            
+            // Recharger la liste
+            await loadSavedPVList();
+            
+            // Si c'est le PV actuellement chargé, réinitialiser le formulaire
+            if (currentPVId === pendingDeletePVId) {
+                resetForm();
+            }
+            
+            showNotification('PV supprimé avec succès', 'success');
+        } else {
+            throw new Error('Erreur lors de la suppression');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        if (errorElem) {
+            errorElem.textContent = 'Erreur lors de la suppression. Veuillez réessayer.';
+            errorElem.classList.remove('d-none');
+        }
+    } finally {
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Supprimer définitivement';
+        }
+        pendingDeletePVId = null;
+    }
+}
+
+// Initialiser la VGP au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    initializeVGP();
+    
+    // Bouton de confirmation de suppression
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', confirmDeletePV);
+    }
+    
+    
+    // Reset du mot de passe quand le modal se ferme
+    const deleteModal = document.getElementById('deletePasswordModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('hidden.bs.modal', function() {
+            const passwordInput = document.getElementById('deletePassword');
+            const errorElem = document.getElementById('deletePasswordError');
+            if (passwordInput) passwordInput.value = '';
+            if (errorElem) {
+                errorElem.classList.add('d-none');
+                errorElem.textContent = '';
+            }
+            pendingDeletePVId = null;
+        });
+    }
+    
+    // Initialiser les contrôles de version
+    initializeVersionControls();
+});
+
+
+// ============================================
+// GESTION DES VERSIONS
+// ============================================
+
+let currentPVVersions = [];
+let currentVersionNumber = 1;
+let isOnCurrentVersion = true; // Track si on est sur la version actuelle ou une version antérieure
+
+/**
+ * Initialise les contrôles de navigation entre versions
+ */
+function initializeVersionControls() {
+    const versionSelect = document.getElementById('versionSelect');
+    const prevBtn = document.getElementById('prevVersionBtn');
+    const nextBtn = document.getElementById('nextVersionBtn');
+    
+    if (!versionSelect) return;
+    
+    // Événement sur le sélecteur
+    versionSelect.addEventListener('change', async function() {
+        const selectedVersion = parseInt(this.value);
+        if (selectedVersion && currentPVId) {
+            // Avant de changer de version, sauvegarder les modifications si on est sur la version actuelle
+            await saveBeforeVersionChange();
+            await loadPVVersion(currentPVId, selectedVersion);
+        }
+    });
+    
+    // Bouton version précédente
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function() {
+            const currentIndex = versionSelect.selectedIndex;
+            if (currentIndex < versionSelect.options.length - 1) {
+                versionSelect.selectedIndex = currentIndex + 1;
+                versionSelect.dispatchEvent(new Event('change'));
+            }
+        });
+    }
+    
+    // Bouton version suivante
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function() {
+            const currentIndex = versionSelect.selectedIndex;
+            if (currentIndex > 0) {
+                versionSelect.selectedIndex = currentIndex - 1;
+                versionSelect.dispatchEvent(new Event('change'));
+            }
+        });
+    }
+}
+
+/**
+ * Charge les versions disponibles pour un PV
+ */
+async function loadPVVersions(pvId) {
+    try {
+        const response = await fetch(`/pv-versions/${pvId}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            console.error('Erreur lors du chargement des versions');
+            return;
+        }
+        
+        currentPVId = pvId;
+        currentPVVersions = data.versions;
+        currentVersionNumber = data.current_version;
+        
+        // Afficher le sélecteur si plus d'une version
+        const versionSelector = document.getElementById('versionSelector');
+        if (versionSelector) {
+            if (currentPVVersions.length > 1) {
+                versionSelector.style.display = 'block';
+                updateVersionSelector();
+            } else {
+                versionSelector.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des versions:', error);
+    }
+}
+
+/**
+ * Met à jour le contenu du sélecteur de versions
+ */
+function updateVersionSelector() {
+    const versionSelect = document.getElementById('versionSelect');
+    
+    if (!versionSelect) return;
+    
+    // Vider et remplir le sélecteur
+    versionSelect.innerHTML = '';
+    
+    currentPVVersions.forEach(version => {
+        const option = document.createElement('option');
+        option.value = version.version_number;
+        const label = version.is_current ? 
+            `Version ${version.version_number} - ${version.date_creation} (Actuelle)` :
+            `Version ${version.version_number} - ${version.date_creation}`;
+        option.textContent = label;
+        if (version.is_current || version.version_number === currentVersionNumber) {
+            option.selected = true;
+        }
+        versionSelect.appendChild(option);
+    });
+}
+
+/**
+ * Charge une version spécifique d'un PV
+ */
+/**
+ * Sauvegarde les modifications avant de changer de version
+ */
+async function saveBeforeVersionChange() {
+    // Ne sauvegarder que si on est sur la version actuelle (pas sur une version antérieure en lecture seule)
+    if (!isOnCurrentVersion) {
+        return;
+    }
+    
+    // Si un auto-save est planifié, l'annuler et sauvegarder immédiatement
+    if (autoSaveTimer) {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = null;
+    }
+    
+    // Attendre que l'auto-save en cours se termine
+    if (isAutoSaving) {
+        await new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+                if (!isAutoSaving) {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 100);
+        });
+    }
+    
+    // Si on est sur la version actuelle et qu'il y a des modifications, sauvegarder
+    const chantier = document.getElementById('chantier').value;
+    if (chantier && chantier.trim() !== '') {
+        try {
+            await savePVDraft(true); // Sauvegarde silencieuse
+        } catch (error) {
+            console.error('Erreur lors de la sauvegarde avant changement de version:', error);
+        }
+    }
+}
+
+async function loadPVVersion(pvId, versionNumber) {
+    try {
+        // Sauvegarder le PV et la version dans localStorage
+        localStorage.setItem('currentPVId', pvId);
+        localStorage.setItem('currentPVVersion', versionNumber);
+        
+        // Vérifier d'abord si c'est une version antérieure
+        const response = await fetch(`/load-pv-version/${pvId}/${versionNumber}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            alert(data.message || 'Erreur lors du chargement de la version');
+            return;
+        }
+        
+        const pvData = data.pv;
+        const previousVersion = currentVersionNumber;
+        currentVersionNumber = versionNumber;
+        
+        // Mettre à jour le flag pour savoir si on est sur la version actuelle
+        isOnCurrentVersion = pvData.is_current_version;
+        
+        // Afficher un avertissement si ce n'est pas la version actuelle
+        if (!pvData.is_current_version) {
+            showVersionWarning(versionNumber, pvData.version_date);
+            disableFormEditing(); // Désactiver l'édition pour les versions antérieures
+        } else {
+            hideVersionWarning();
+            enableFormEditing(); // Réactiver l'édition pour la version actuelle
+        }
+        
+        // IMPORTANT: Réinitialiser complètement le formulaire avant de charger les nouvelles données
+        // Cela évite que les modifications d'une version restent sur une autre
+        resetForm();
+        
+        // Charger les données dans le formulaire
+        populateFormWithPVData(pvData);
+        
+        // Mettre à jour l'indicateur et le sélecteur de versions
+        updatePVStatusBadge();
+        updateVersionSelector();
+        
+    } catch (error) {
+        console.error('Erreur lors du chargement de la version:', error);
+        alert('Erreur lors du chargement de la version');
+    }
+}
+
+/**
+ * Affiche un avertissement quand on consulte une ancienne version
+ */
+function showVersionWarning(versionNumber, versionDate) {
+    const indicator = document.getElementById('currentPVIndicator');
+    if (!indicator) return;
+    
+    indicator.classList.remove('alert-info', 'alert-success');
+    indicator.classList.add('alert-warning');
+    
+    // Ajouter un message d'avertissement
+    let warningDiv = document.getElementById('versionWarningMessage');
+    if (!warningDiv) {
+        warningDiv = document.createElement('div');
+        warningDiv.id = 'versionWarningMessage';
+        warningDiv.className = 'alert alert-warning mt-2 mb-0';
+        const detailsDiv = indicator.querySelector('.pv-indicator-details');
+        if (detailsDiv) {
+            detailsDiv.appendChild(warningDiv);
+        }
+    }
+    
+    warningDiv.innerHTML = `
+        <i class="fas fa-exclamation-triangle"></i> 
+        <strong>Attention :</strong> Vous consultez une ancienne version (Version ${versionNumber} du ${versionDate}). 
+        <strong>Mode lecture seule - Les modifications sont désactivées.</strong>
+    `;
+    warningDiv.style.display = 'block';
+}
+
+/**
+ * Masque l'avertissement de version
+ */
+function hideVersionWarning() {
+    const warningDiv = document.getElementById('versionWarningMessage');
+    if (warningDiv) {
+        warningDiv.style.display = 'none';
+    }
+    
+    const indicator = document.getElementById('currentPVIndicator');
+    if (indicator) {
+        indicator.classList.remove('alert-warning', 'alert-info');
+        indicator.classList.add('alert-info');
+    }
+}
+
+/**
+ * Désactive l'édition du formulaire (mode lecture seule)
+ */
+function disableFormEditing() {
+    const form = document.getElementById('pvForm');
+    if (!form) return;
+    
+    // Désactiver tous les inputs, textareas et selects
+    const inputs = form.querySelectorAll('input, textarea, select, button[type="button"]');
+    inputs.forEach(element => {
+        // Ne pas désactiver le sélecteur de version
+        if (element.id === 'versionSelect') return;
+        
+        // Ne pas désactiver les boutons radio du type de PV (réception/retour)
+        if (element.name === 'pv_type_sticky' || 
+            element.id === 'pv_type_compact_reception' || 
+            element.id === 'pv_type_compact_retour') {
+            return;
+        }
+        
+        element.disabled = true;
+        element.style.cursor = 'not-allowed';
+    });
+    
+    // Désactiver les signatures
+    if (signaturePadReception) {
+        signaturePadReception.off();
+    }
+    if (signaturePadRetour) {
+        signaturePadRetour.off();
+    }
+    
+    // Désactiver les boutons d'ajout de photos
+    const photoButtons = document.querySelectorAll('.add-photo-btn, .photo-item button');
+    photoButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.style.cursor = 'not-allowed';
+    });
+    
+    // Ajouter une classe au formulaire pour le style
+    form.classList.add('readonly-mode');
+}
+
+/**
+ * Réactive l'édition du formulaire
+ */
+function enableFormEditing() {
+    const form = document.getElementById('pvForm');
+    if (!form) return;
+    
+    // Réactiver tous les inputs, textareas et selects
+    const inputs = form.querySelectorAll('input, textarea, select, button[type="button"]');
+    inputs.forEach(element => {
+        element.disabled = false;
+        element.style.cursor = '';
+    });
+    
+    // Réactiver les signatures
+    if (signaturePadReception) {
+        signaturePadReception.on();
+    }
+    if (signaturePadRetour) {
+        signaturePadRetour.on();
+    }
+    
+    // Réactiver les boutons d'ajout de photos
+    const photoButtons = document.querySelectorAll('.add-photo-btn, .photo-item button');
+    photoButtons.forEach(btn => {
+        btn.disabled = false;
+        btn.style.cursor = '';
+    });
+    
+    // Retirer la classe readonly du formulaire
+    form.classList.remove('readonly-mode');
+}
+
+/**
+ * Remplit le formulaire avec les données d'un PV (y compris anciennes versions)
+ */
+function populateFormWithPVData(pvData) {
+    const formData = pvData.form_data || pvData;
+    
+    // Mettre à jour les variables globales
+    currentPVId = pvData.id;
+    document.getElementById('pvId').value = currentPVId;
+    
+    // Stocker les données du PV pour y accéder dans updatePVStatusBadge
+    window.currentPVData = pvData;
+    
+    // Utiliser la fonction existante populateForm pour remplir le formulaire
+    populateForm(formData);
+    
+    // Charger les données VGP si présentes
+    const vgpDateInput = document.getElementById('vgp_date');
+    if (vgpDateInput && pvData.vgp_date) {
+        vgpDateInput.value = pvData.vgp_date;
+    }
+    
+    // Afficher le lien du document VGP si présent
+    const vgpDocLink = document.getElementById('vgp_document_link');
+    const vgpDocCurrent = document.getElementById('vgp_document_current');
+    if (vgpDocLink && vgpDocCurrent && pvData.vgp_document_path) {
+        vgpDocLink.href = `/vgp-document/${pvData.id}`;
+        vgpDocCurrent.style.display = 'block';
+    } else if (vgpDocCurrent) {
+        vgpDocCurrent.style.display = 'none';
+    }
+    
+    // Mettre à jour l'indicateur VGP
+    updateVGPIndicator();
+}
+
+// Ajuster dynamiquement le padding du body en fonction de la hauteur de l'indicateur
+function adjustBodyPadding() {
+    const indicator = document.getElementById('currentPVIndicator');
+    const notificationContainer = document.querySelector('.notification-container');
+    
+    if (indicator && document.body.classList.contains('has-pv-indicator')) {
+        const height = indicator.offsetHeight;
+        document.body.style.paddingTop = height + 'px';
+        
+        // Ajuster aussi la position des notifications
+        if (notificationContainer) {
+            notificationContainer.style.top = (height + 10) + 'px'; // 10px de marge
+        }
+    } else {
+        document.body.style.paddingTop = '0';
+        if (notificationContainer) {
+            notificationContainer.style.top = '70px'; // Valeur par défaut
+        }
+    }
+}
+
+// Observer les changements de taille de l'indicateur
+const indicatorObserver = new ResizeObserver(() => {
+    adjustBodyPadding();
+});
+
+// Démarrer l'observation dès que le DOM est prêt
+document.addEventListener('DOMContentLoaded', function() {
+    const indicator = document.getElementById('currentPVIndicator');
+    if (indicator) {
+        indicatorObserver.observe(indicator);
+        adjustBodyPadding();
+    }
+    
+    // Ajuster aussi lors du redimensionnement de la fenêtre
+    window.addEventListener('resize', adjustBodyPadding);
+});
+
+/**
+ * Initialise les boutons de navigation en haut/bas de page
+ */
+function initializeScrollButtons() {
+    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+    const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');
+    
+    if (!scrollToTopBtn || !scrollToBottomBtn) return;
+    
+    // Bouton pour aller en haut
+    scrollToTopBtn.addEventListener('click', function() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+    
+    // Bouton pour aller en bas
+    scrollToBottomBtn.addEventListener('click', function() {
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth'
+        });
+    });
+    
+    // Afficher/masquer les boutons selon la position du scroll
+    window.addEventListener('scroll', function() {
+        const scrollPosition = window.scrollY;
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.body.scrollHeight;
+        
+        // Afficher le bouton "haut" si on a scrollé plus de 300px
+        if (scrollPosition > 300) {
+            scrollToTopBtn.style.display = 'flex';
+        } else {
+            scrollToTopBtn.style.display = 'none';
+        }
+        
+        // Afficher le bouton "bas" si on n'est pas en bas de page
+        if (scrollPosition + windowHeight < documentHeight - 100) {
+            scrollToBottomBtn.style.display = 'flex';
+        } else {
+            scrollToBottomBtn.style.display = 'none';
+        }
+    });
+}

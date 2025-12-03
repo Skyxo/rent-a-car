@@ -38,31 +38,46 @@
     </header>
 
     <!-- Indicateur PV Actuel (Fixe en haut) -->
-    <div id="currentPVIndicator" class="current-pv-indicator alert alert-info d-flex align-items-start" role="alert">
-        <div class="container" style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; gap: 1rem;">
-            <div class="pv-indicator-icon me-2">
-                <i class="fas fa-file-alt fs-3"></i>
-            </div>
-            <div class="flex-grow-1">
-                <div class="pv-indicator-status">
-                    <strong>Nouveau PV en cours</strong>
+    <div id="currentPVIndicator" class="current-pv-indicator alert alert-info" role="alert">
+        <div class="container-fluid px-2 px-md-3">
+            <div class="row g-2">
+                <!-- Sur PC: tout en une ligne, Sur mobile: 2 lignes (info + version) -->
+                <div class="col-12 col-lg-auto d-flex align-items-center gap-2 flex-grow-1">
+                    <div class="pv-indicator-icon d-none d-lg-flex flex-shrink-0">
+                        <i class="fas fa-file-alt fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="pv-indicator-status">
+                            <strong>Nouveau PV en cours</strong>
+                        </div>
+                        <div class="pv-indicator-details small d-lg-inline d-block">
+                            Le formulaire est vide et prêt à être rempli
+                        </div>
+                    </div>
                 </div>
-                <div class="pv-indicator-details small mt-1">
-                    Le formulaire est vide et prêt à être rempli
+                
+                <!-- Sélecteur de type PV compact (visible au scroll) -->
+                <div id="pvTypeCompact" class="col-12 col-lg-auto pv-type-compact flex-shrink-0" style="display: none;">
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Type de PV">
+                        <input type="radio" class="btn-check" name="pv_type_compact" id="pv_type_compact_reception" value="reception" checked>
+                        <label class="btn btn-outline-primary px-2 px-lg-3" for="pv_type_compact_reception">
+                            <i class="fas fa-arrow-down"></i> <span class="d-inline d-md-inline">Réception</span>
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="pv_type_compact" id="pv_type_compact_retour" value="retour">
+                        <label class="btn btn-outline-primary px-2 px-lg-3" for="pv_type_compact_retour">
+                            <i class="fas fa-arrow-up"></i> <span class="d-inline d-md-inline">Retour</span>
+                        </label>
+                    </div>
                 </div>
-            </div>
-            <!-- Sélecteur de type PV compact (visible au scroll) -->
-            <div id="pvTypeCompact" class="pv-type-compact" style="display: none;">
-                <div class="btn-group btn-group-sm" role="group" aria-label="Type de PV">
-                    <input type="radio" class="btn-check" name="pv_type_compact" id="pv_type_compact_reception" value="reception" checked>
-                    <label class="btn btn-outline-primary btn-sm" for="pv_type_compact_reception">
-                        <i class="fas fa-arrow-down"></i> Réception
-                    </label>
-                    
-                    <input type="radio" class="btn-check" name="pv_type_compact" id="pv_type_compact_retour" value="retour">
-                    <label class="btn btn-outline-primary btn-sm" for="pv_type_compact_retour">
-                        <i class="fas fa-arrow-up"></i> Retour
-                    </label>
+                
+                <!-- Sélecteur de version: sur PC en ligne, sur mobile en dessous -->
+                <div class="col-12 col-lg-auto" id="versionSelector" style="display: none;">
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select form-select-sm version-select-width" id="versionSelect">
+                            <!-- Options générées dynamiquement -->
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -81,10 +96,30 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Bouton Configuration SMTP -->
-        <div class="mb-3 text-end">
-            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#smtpConfigModal">
+        <!-- Alerte VGP - Affichée seulement si nécessaire -->
+        <div id="vgpAlertBanner" class="alert alert-dismissible fade show mb-3 position-relative" role="alert" style="display: none; border-left: 5px solid; padding-right: 3rem;">
+            <button type="button" class="btn-close position-absolute top-0 end-0 m-2" data-bs-dismiss="alert" aria-label="Close" style="z-index: 10;"></button>
+            <div class="d-flex align-items-start flex-wrap gap-2">
+                <div class="d-flex align-items-start flex-grow-1">
+                    <i class="fas fa-exclamation-triangle fa-2x me-3 flex-shrink-0"></i>
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1" id="vgpAlertTitle"></h5>
+                        <p class="mb-2" id="vgpAlertMessage"></p>
+                        <button type="button" class="btn btn-light btn-sm mt-1" id="vgpAlertViewBtn">
+                            <i class="fas fa-eye"></i> Voir les détails
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Boutons Configuration et Administration -->
+        <div class="mb-3 d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-outline-secondary" id="smtpConfigBtn" data-bs-toggle="modal" data-bs-target="#smtpConfigModal">
                 <i class="fas fa-cog"></i> Configuration Email
+            </button>
+            <button type="button" class="btn btn-warning text-dark" id="vgpAdminBtn">
+                <i class="fas fa-exclamation-triangle"></i> Administration VGP
             </button>
         </div>
 
@@ -201,8 +236,7 @@
                                 <label class="form-label small text-muted mb-1">
                                     <i class="fas fa-envelope me-1"></i>Email conducteur
                                 </label>
-                                <select class="form-select select2-filter" id="pvFilterEmailConducteur" style="width: 100%;">
-                                    <option value="">Tous emails conducteur</option>
+                                <select class="form-select select2-filter" id="pvFilterEmailConducteur" multiple style="width: 100%;">
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -314,8 +348,8 @@
                             <small class="text-muted">Tous les PV seront également envoyés à cette adresse</small>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="responsable" class="form-label">Responsable Chantier</label>
-                            <select class="form-select select2-field" id="responsable" name="responsable" style="width: 100%;">
+                            <label for="responsable" class="form-label">Responsable Chantier <span class="text-danger">*</span></label>
+                            <select class="form-select select2-field" id="responsable" name="responsable" required style="width: 100%;">
                                 <option value=""></option>
                             </select>
                         </div>
@@ -323,20 +357,20 @@
                     
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label for="materiel_numero" class="form-label">Matériel / N°</label>
-                            <select class="form-select select2-field" id="materiel_numero" name="materiel_numero" style="width: 100%;">
+                            <label for="materiel_numero" class="form-label">Matériel / N° <span class="text-danger">*</span></label>
+                            <select class="form-select select2-field" id="materiel_numero" name="materiel_numero" required style="width: 100%;">
                                 <option value=""></option>
                             </select>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="materiel_type" class="form-label">Type</label>
-                            <select class="form-select select2-field" id="materiel_type" name="materiel_type" style="width: 100%;">
+                            <label for="materiel_type" class="form-label">Type <span class="text-danger">*</span></label>
+                            <select class="form-select select2-field" id="materiel_type" name="materiel_type" required style="width: 100%;">
                                 <option value=""></option>
                             </select>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="fournisseur" class="form-label">Fournisseur</label>
-                            <select class="form-select select2-field" id="fournisseur" name="fournisseur" style="width: 100%;">
+                            <label for="fournisseur" class="form-label">Fournisseur <span class="text-danger">*</span></label>
+                            <select class="form-select select2-field" id="fournisseur" name="fournisseur" required style="width: 100%;">
                                 <option value=""></option>
                             </select>
                         </div>
@@ -384,8 +418,8 @@
                         <div class="col-md-6">
                             <h5 class="text-clc-navy mb-3"><i class="fas fa-arrow-down"></i> Réception</h5>
                             <div class="mb-3">
-                                <label for="date_reception" class="form-label">Date de réception</label>
-                                <input type="date" class="form-control" id="date_reception" name="date_reception">
+                                <label for="date_reception" class="form-label">Date de réception <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="date_reception" name="date_reception" required>
                             </div>
                             <div class="mb-3">
                                 <label for="compteur_reception" class="form-label">Compteur d'heure</label>
@@ -432,7 +466,7 @@
                                             <button type="button" class="btn btn-sm btn-outline-secondary add-photo-btn mt-2" 
                                                     data-field="carrosserie" 
                                                     onclick="openPhotoModal('carrosserie')">
-                                                <i class="fas fa-plus"></i> Photo <i class="fas fa-camera"></i>
+                                                <i class="fas fa-camera"></i> + Photo
                                             </button>
                                             <div class="photo-preview-container mt-2" id="photos_preview_carrosserie"></div>
                                             <div style="display: none;">
@@ -472,7 +506,7 @@
                                             <button type="button" class="btn btn-sm btn-outline-secondary add-photo-btn mt-2" 
                                                     data-field="eclairage" 
                                                     onclick="openPhotoModal('eclairage')">
-                                                <i class="fas fa-plus"></i> Photo <i class="fas fa-camera"></i>
+                                                <i class="fas fa-camera"></i> + Photo
                                             </button>
                                             <div class="photo-preview-container mt-2" id="photos_preview_eclairage"></div>
                                             <div style="display: none;">
@@ -686,9 +720,10 @@
                                 <tr>
                                     <td class="element-cell">
                                         <div class="element-title">Conformité réglementaire</div>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary add-photo-btn mt-2" 
+                                        
+                                        <button type="button" class="btn btn-sm btn-primary add-photo-btn mt-2" 
                                                 onclick="openPhotoModal('conformite')">
-                                            <i class="fas fa-camera"></i> + Photo
+                                            <i class="fas fa-file-import"></i> Importer des photos
                                         </button>
                                         <div class="photo-preview-container" id="preview_conformite"></div>
                                         <div style="display: none;">
@@ -700,6 +735,37 @@
                                                    name="photo_conformite_retour" accept="image/*" 
                                                    data-container="photos_conformite_retour" data-field="conformite_retour" multiple>
                                             <div class="multi-photo-container" id="photos_conformite_retour"></div>
+                                        </div>
+                                        
+                                        <!-- VGP Section -->
+                                        <div class="vgp-section mt-4 p-3 border rounded" style="background-color: #f8f9fa;">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <strong class="me-2">Vérification Générale Périodique (VGP)</strong>
+                                                <span class="badge vgp-status-badge" id="vgp_status_badge" style="display: none;"></span>
+                                            </div>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label for="vgp_date" class="form-label small mb-1">Date du dernier contrôle :</label>
+                                                    <input type="date" class="form-control form-control-sm" id="vgp_date" name="vgp_date">
+                                                    <small class="text-muted d-block mt-1" id="vgp_next_date"></small>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <input type="file" class="d-none" id="vgp_document" 
+                                                           name="vgp_document" accept=".pdf,application/pdf">
+                                                    <button type="button" class="btn btn-outline-primary btn-sm w-100" 
+                                                            onclick="document.getElementById('vgp_document').click()">
+                                                        <i class="fas fa-file-upload me-1"></i> Importer le rapport de conformité
+                                                    </button>
+                                                    <div id="vgp_document_current" style="display: none;" class="mt-2">
+                                                        <small>
+                                                            <a href="#" id="vgp_document_link" target="_blank" class="text-decoration-none">
+                                                                <i class="fas fa-file-pdf text-danger"></i> Voir le rapport actuel
+                                                            </a>
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
                                     <td class="reception-column">
@@ -1118,11 +1184,6 @@
                 </div>
             </div>
         </form>
-        
-        <!-- Bouton de navigation scroll -->
-        <button id="scrollNavBtn" class="btn btn-primary shadow-lg" style="display: none;">
-            <i class="fas fa-chevron-down" id="scrollNavIcon"></i>
-        </button>
     </main>
 
     <!-- Modal Configuration SMTP -->
@@ -1289,11 +1350,184 @@
         </div>
     </div>
 
+    <!-- Modal Administration VGP -->
+    <div class="modal fade" id="vgpAdminModal" tabindex="-1" aria-labelledby="vgpAdminModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="vgpAdminModalLabel">
+                        <i class="fas fa-exclamation-triangle"></i> Administration VGP - Vérifications Périodiques
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> <strong>Vérification Générale Périodique (VGP)</strong><br>
+                        Contrôle réglementaire obligatoire de l'état de conservation des équipements de travail, périodicité 6 mois pour les engins de chantier.
+                        <ul class="mt-2 mb-0">
+                            <li><span class="badge bg-success">Vert</span> : VGP valide (plus de 3 semaines avant échéance)</li>
+                            <li><span class="badge bg-warning text-dark">Orange</span> : À renouveler (moins de 3 semaines avant échéance)</li>
+                            <li><span class="badge bg-danger">Rouge</span> : Échue (plus de 6 mois depuis le dernier contrôle)</li>
+                        </ul>
+                    </div>
+                    
+                    <ul class="nav nav-tabs mb-3" id="vgpTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="vgp-expired-tab" data-bs-toggle="tab" data-bs-target="#vgp-expired" type="button" role="tab">
+                                <i class="fas fa-times-circle text-danger"></i> VGP Expirées <span class="badge bg-danger" id="vgpExpiredCount">0</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="vgp-warning-tab" data-bs-toggle="tab" data-bs-target="#vgp-warning" type="button" role="tab">
+                                <i class="fas fa-exclamation-circle text-warning"></i> À Renouveler <span class="badge bg-warning text-dark" id="vgpWarningCount">0</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="vgp-valid-tab" data-bs-toggle="tab" data-bs-target="#vgp-valid" type="button" role="tab">
+                                <i class="fas fa-check-circle text-success"></i> VGP Valides <span class="badge bg-success" id="vgpValidCount">0</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="vgp-none-tab" data-bs-toggle="tab" data-bs-target="#vgp-none" type="button" role="tab">
+                                <i class="fas fa-question-circle text-secondary"></i> Sans VGP <span class="badge bg-secondary" id="vgpNoneCount">0</span>
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="vgpTabContent">
+                        <div class="tab-pane fade show active" id="vgp-expired" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-danger">
+                                        <tr>
+                                            <th>Chantier</th>
+                                            <th>Matériel</th>
+                                            <th>N° Série</th>
+                                            <th>Fournisseur</th>
+                                            <th>Date contrôle</th>
+                                            <th>Échue depuis</th>
+                                            <th>Rapport</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vgpExpiredList"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="vgp-warning" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-warning">
+                                        <tr>
+                                            <th>Chantier</th>
+                                            <th>Matériel</th>
+                                            <th>N° Série</th>
+                                            <th>Fournisseur</th>
+                                            <th>Date contrôle</th>
+                                            <th>Échéance dans</th>
+                                            <th>Rapport</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vgpWarningList"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="vgp-valid" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-success">
+                                        <tr>
+                                            <th>Chantier</th>
+                                            <th>Matériel</th>
+                                            <th>N° Série</th>
+                                            <th>Fournisseur</th>
+                                            <th>Date contrôle</th>
+                                            <th>Valide jusqu'au</th>
+                                            <th>Rapport</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vgpValidList"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="vgp-none" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-secondary">
+                                        <tr>
+                                            <th>Chantier</th>
+                                            <th>Matériel</th>
+                                            <th>N° Série</th>
+                                            <th>Fournisseur</th>
+                                            <th>Date Réception</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vgpNoneList"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmation Suppression avec Mot de Passe -->
+    <div class="modal fade" id="deletePasswordModal" tabindex="-1" aria-labelledby="deletePasswordModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deletePasswordModalLabel">
+                        <i class="fas fa-trash-alt"></i> Confirmer la suppression
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i> <strong>Attention !</strong><br>
+                        Vous êtes sur le point de supprimer un PV. Cette action est irréversible.
+                    </div>
+                    <p id="deletePVInfo" class="mb-3"></p>
+                    <div class="mb-3">
+                        <label for="deletePassword" class="form-label">
+                            <strong>Mot de passe de suppression :</strong>
+                        </label>
+                        <input type="password" class="form-control" id="deletePassword" placeholder="Entrez le mot de passe" autocomplete="off">
+                        <small class="text-muted">Le mot de passe est requis pour autoriser la suppression.</small>
+                    </div>
+                    <div id="deletePasswordError" class="alert alert-danger d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="fas fa-trash-alt"></i> Supprimer définitivement
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer class="clc-footer mt-5">
         <div class="container text-center">
             <p class="mb-0">&copy; 2025 France Montage - Tous droits réservés</p>
         </div>
     </footer>
+
+    <!-- Boutons de navigation flottants -->
+    <div class="scroll-buttons">
+        <button type="button" class="btn btn-primary scroll-btn" id="scrollToBottomBtn" title="Aller en bas">
+            <i class="fas fa-arrow-down"></i>
+        </button>
+        <button type="button" class="btn btn-primary scroll-btn" id="scrollToTopBtn" title="Aller en haut">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+    </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

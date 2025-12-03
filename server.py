@@ -20,14 +20,21 @@ import json
 import uuid
 from pathlib import Path
 
+# Import SQLAlchemy et modèle PV
+from setup_db import db, PV, PVVersion, init_db
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-change-in-production')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limite 16MB pour protection DoS
 
-# Répertoires de stockage
-SAVED_PV_DIR = Path('saved_pv')
-SAVED_PV_DIR.mkdir(exist_ok=True)
+# Configuration SQLAlchemy
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pvs.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Initialiser la base de données
+init_db(app)
+
+# Répertoire de configuration
 CONFIG_DIR = Path('config')
 CONFIG_DIR.mkdir(exist_ok=True)
 SMTP_CONFIG_FILE = CONFIG_DIR / 'smtp_config.json'
@@ -332,6 +339,20 @@ def submit():
         # Ajouter la date de génération
         form_data['date_generation'] = datetime.now().strftime('%d/%m/%Y %H:%M')
         
+        # Récupérer la version courante ou créer la version 1
+        pv_id = request.form.get('pv_id')
+        version_number = 1
+        if pv_id:
+            existing_pv = PV.query.get(pv_id)
+            if existing_pv:
+                version_number = existing_pv.version_courante + 1
+        
+        # Ajouter les infos de version au template
+        form_data['version_info'] = {
+            'number': version_number,
+            'date': datetime.now().strftime('%d/%m/%Y %H:%M')
+        }
+        
         # Générer le HTML pour le PDF
         html_content = render_template('pdf_template.html', **form_data)
         
@@ -357,26 +378,106 @@ def submit():
         if success:
             flash(message, 'success')
             
-            # Sauvegarder le PV après envoi réussi
+            # Sauvegarder le PV après envoi réussi dans la base de données
             pv_id = request.form.get('pv_id')
             if not pv_id:
                 # Générer un nouvel ID si le PV n'en a pas
                 pv_id = str(uuid.uuid4())
             
-            # Préparer les données pour la sauvegarde
-            pv_data = {
-                'id': pv_id,
-                'chantier': form_data['chantier'],
-                'created_at': datetime.now().isoformat(),
-                'updated_at': datetime.now().isoformat(),
-                'last_sent_date': datetime.now().isoformat(),  # Date du dernier envoi
-                'form_data': form_data
-            }
-            
-            # Sauvegarder dans un fichier JSON
-            file_path = SAVED_PV_DIR / f"{pv_id}.json"
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(pv_data, f, ensure_ascii=False, indent=2)
+            try:
+                # Vérifier si le PV existe déjà
+                existing_pv = PV.query.get(pv_id)
+                
+                if existing_pv:
+                    # Créer une nouvelle version avant la mise à jour
+                    new_version_number = existing_pv.version_courante + 1
+                    
+                    # Sauvegarder l'état actuel comme version
+                    version_data = existing_pv.get_data()
+                    version_data['version_info'] = {
+                        'number': existing_pv.version_courante,
+                        'date': datetime.now().isoformat(),
+                        'sent_to': ', '.join(recipients)
+                    }
+                    
+                    new_version = PVVersion(
+                        pv_id=pv_id,
+                        version_number=existing_pv.version_courante,
+                        data_dict=version_data,
+                        created_by='email_send',
+                        comment=f"Envoyé à {', '.join(recipients)}"
+                    )
+                    db.session.add(new_version)
+                    
+                    # Mise à jour d'un PV existant avec nouvelle version
+                    existing_pv.chantier = form_data['chantier']
+                    existing_pv.date_dernier_envoi = datetime.now()
+                    existing_pv.version_courante = new_version_number
+                    
+                    # Mettre à jour les champs indexés
+                    indexed_fields = PV.extract_indexed_fields(form_data)
+                    existing_pv.conducteur_email = indexed_fields.get('conducteur_email')
+                    existing_pv.entreprise_email = indexed_fields.get('entreprise_email')
+                    existing_pv.responsable = indexed_fields.get('responsable')
+                    existing_pv.fournisseur = indexed_fields.get('fournisseur')
+                    existing_pv.materiel_type = indexed_fields.get('materiel_type')
+                    existing_pv.date_reception = indexed_fields.get('date_reception')
+                    existing_pv.date_retour = indexed_fields.get('date_retour')
+                    existing_pv.statut = indexed_fields.get('statut')
+                    
+                    # Mettre à jour le JSON complet avec info de version
+                    pv_dict = existing_pv.get_data()
+                    pv_dict['form_data'] = form_data
+                    pv_dict['updated_at'] = datetime.now().isoformat()
+                    pv_dict['last_sent_date'] = datetime.now().isoformat()
+                    pv_dict['version_info'] = {
+                        'number': new_version_number,
+                        'date': datetime.now().isoformat(),
+                        'sent_to': ', '.join(recipients)
+                    }
+                    existing_pv.set_data(pv_dict)
+                    
+                else:
+                    # Créer un nouveau PV (Version 1)
+                    indexed_fields = PV.extract_indexed_fields(form_data)
+                    
+                    pv_dict = {
+                        'id': pv_id,
+                        'chantier': form_data['chantier'],
+                        'created_at': datetime.now().isoformat(),
+                        'updated_at': datetime.now().isoformat(),
+                        'last_sent_date': datetime.now().isoformat(),
+                        'form_data': form_data,
+                        'version_info': {
+                            'number': 1,
+                            'date': datetime.now().isoformat(),
+                            'sent_to': ', '.join(recipients)
+                        }
+                    }
+                    
+                    new_pv = PV(
+                        id=pv_id,
+                        chantier=form_data['chantier'],
+                        data_dict=pv_dict,
+                        conducteur_email=indexed_fields.get('conducteur_email'),
+                        entreprise_email=indexed_fields.get('entreprise_email'),
+                        responsable=indexed_fields.get('responsable'),
+                        fournisseur=indexed_fields.get('fournisseur'),
+                        materiel_type=indexed_fields.get('materiel_type'),
+                        date_reception=indexed_fields.get('date_reception'),
+                        date_retour=indexed_fields.get('date_retour'),
+                        statut=indexed_fields.get('statut'),
+                        date_dernier_envoi=datetime.now()
+                    )
+                    db.session.add(new_pv)
+                
+                # Commit des changements
+                db.session.commit()
+                
+            except Exception as db_error:
+                db.session.rollback()
+                print(f"Erreur lors de la sauvegarde DB: {db_error}")
+                flash(f"Attention: email envoyé mais erreur de sauvegarde: {db_error}", 'warning')
         else:
             flash(message, 'danger')
         
@@ -511,7 +612,7 @@ def test_smtp_config():
 @app.route('/save', methods=['POST'])
 def save_pv():
     """
-    Sauvegarde un PV en cours de rédaction.
+    Sauvegarde un PV en cours de rédaction dans la base de données.
     Permet de reprendre l'édition plus tard.
     """
     try:
@@ -519,30 +620,80 @@ def save_pv():
         
         # Générer un ID unique si nouveau PV
         pv_id = data.get('pv_id') or str(uuid.uuid4())
+        chantier = data.get('chantier', 'Sans nom')
         
-        # Ajouter des métadonnées
-        pv_data = {
-            'id': pv_id,
-            'chantier': data.get('chantier', 'Sans nom'),
-            'created_at': data.get('created_at', datetime.now().isoformat()),
-            'updated_at': datetime.now().isoformat(),
-            'last_sent_date': None,  # Pas encore envoyé
-            'form_data': data
-        }
+        # Vérifier si le PV existe déjà
+        existing_pv = PV.query.get(pv_id)
         
-        # Sauvegarder dans un fichier JSON
-        file_path = SAVED_PV_DIR / f"{pv_id}.json"
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(pv_data, f, ensure_ascii=False, indent=2)
+        if existing_pv:
+            # Mise à jour d'un PV existant
+            existing_pv.chantier = chantier
+            
+            # Mettre à jour les champs indexés
+            indexed_fields = PV.extract_indexed_fields(data)
+            existing_pv.conducteur_email = indexed_fields.get('conducteur_email')
+            existing_pv.entreprise_email = indexed_fields.get('entreprise_email')
+            existing_pv.responsable = indexed_fields.get('responsable')
+            existing_pv.fournisseur = indexed_fields.get('fournisseur')
+            existing_pv.materiel_type = indexed_fields.get('materiel_type')
+            existing_pv.date_reception = indexed_fields.get('date_reception')
+            existing_pv.date_retour = indexed_fields.get('date_retour')
+            existing_pv.statut = indexed_fields.get('statut')
+            
+            # Mettre à jour la date VGP si présente
+            if 'vgp_date' in data:
+                existing_pv.vgp_date = data.get('vgp_date') or None
+            
+            # Mettre à jour explicitement la date de mise à jour (important pour l'affichage de la version courante)
+            existing_pv.date_mise_a_jour = datetime.utcnow()
+            
+            # Mettre à jour le JSON complet
+            pv_dict = existing_pv.get_data()
+            pv_dict['form_data'] = data
+            pv_dict['updated_at'] = datetime.now().isoformat()
+            existing_pv.set_data(pv_dict)
+            
+        else:
+            # Créer un nouveau PV
+            indexed_fields = PV.extract_indexed_fields(data)
+            
+            pv_dict = {
+                'id': pv_id,
+                'chantier': chantier,
+                'created_at': data.get('created_at', datetime.now().isoformat()),
+                'updated_at': datetime.now().isoformat(),
+                'last_sent_date': None,
+                'form_data': data
+            }
+            
+            new_pv = PV(
+                id=pv_id,
+                chantier=chantier,
+                data_dict=pv_dict,
+                conducteur_email=indexed_fields.get('conducteur_email'),
+                entreprise_email=indexed_fields.get('entreprise_email'),
+                responsable=indexed_fields.get('responsable'),
+                fournisseur=indexed_fields.get('fournisseur'),
+                materiel_type=indexed_fields.get('materiel_type'),
+                date_reception=indexed_fields.get('date_reception'),
+                date_retour=indexed_fields.get('date_retour'),
+                statut=indexed_fields.get('statut'),
+                vgp_date=data.get('vgp_date') or None
+            )
+            db.session.add(new_pv)
+        
+        # Commit des changements
+        db.session.commit()
         
         return jsonify({
             'success': True,
-            'message': f'PV "{pv_data["chantier"]}" sauvegardé avec succès',
+            'message': f'PV "{chantier}" sauvegardé avec succès',
             'pv_id': pv_id,
-            'chantier': pv_data['chantier']
+            'chantier': chantier
         })
     
     except Exception as e:
+        db.session.rollback()
         return jsonify({
             'success': False,
             'message': f'Erreur lors de la sauvegarde: {str(e)}'
@@ -552,53 +703,42 @@ def save_pv():
 @app.route('/list-pv', methods=['GET'])
 def list_pv():
     """
-    Liste tous les PV sauvegardés.
+    Liste tous les PV sauvegardés depuis la base de données.
     """
     try:
+        # Requête SQL avec tri par date de mise à jour
+        pvs = PV.query.order_by(PV.date_mise_a_jour.desc()).all()
+        
         pv_list = []
-        
-        for file_path in SAVED_PV_DIR.glob('*.json'):
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    pv_data = json.load(f)
-                    form_data = pv_data.get('form_data', {})
-                    
-                    # Déterminer l'état de complétion (Réception/Retour)
-                    has_reception = bool(form_data.get('signature_reception'))
-                    has_retour = bool(form_data.get('signature_retour'))
-                    
-                    if has_reception and has_retour:
-                        completion_status = 'complete'
-                    elif has_reception:
-                        completion_status = 'reception_only'
-                    elif has_retour:
-                        completion_status = 'retour_only'
-                    else:
-                        completion_status = 'empty'
-                    
-                    pv_list.append({
-                        'id': pv_data['id'],
-                        'chantier': pv_data.get('chantier', 'Sans nom'),
-                        'email_conducteur': form_data.get('email_conducteur', ''),
-                        'responsable': form_data.get('responsable', ''),
-                        'fournisseur': form_data.get('fournisseur', ''),
-                        'materiel_numero': form_data.get('materiel_numero', ''),
-                        'materiel_type': form_data.get('materiel_type', ''),
-                        'date_reception': form_data.get('date_reception', ''),
-                        'date_retour': form_data.get('date_retour', ''),
-                        'created_at': pv_data.get('created_at', ''),
-                        'updated_at': pv_data.get('updated_at', ''),
-                        'last_sent_date': pv_data.get('last_sent_date', None),
-                        'completion_status': completion_status,
-                        'has_reception': has_reception,
-                        'has_retour': has_retour
-                    })
-            except Exception as e:
-                print(f"Erreur lors de la lecture de {file_path}: {e}")
-                continue
-        
-        # Trier par date de mise à jour (plus récent en premier)
-        pv_list.sort(key=lambda x: x.get('updated_at', ''), reverse=True)
+        for pv in pvs:
+            # Récupérer le JSON complet
+            pv_dict = pv.get_data()
+            form_data = pv_dict.get('form_data', {})
+            
+            # Déterminer l'état de complétion
+            has_reception = bool(form_data.get('signature_reception'))
+            has_retour = bool(form_data.get('signature_retour'))
+            
+            pv_list.append({
+                'id': pv.id,
+                'chantier': pv.chantier,
+                'email_conducteur': pv.conducteur_email or form_data.get('email_conducteur', ''),
+                'responsable': pv.responsable or form_data.get('responsable', ''),
+                'fournisseur': pv.fournisseur or form_data.get('fournisseur', ''),
+                'materiel_numero': form_data.get('materiel_numero', ''),
+                'materiel_type': pv.materiel_type or form_data.get('materiel_type', ''),
+                'date_reception': pv.date_reception or form_data.get('date_reception', ''),
+                'date_retour': pv.date_retour or form_data.get('date_retour', ''),
+                'created_at': pv.date_creation.isoformat() if pv.date_creation else '',
+                'updated_at': pv.date_mise_a_jour.isoformat() if pv.date_mise_a_jour else '',
+                'last_sent_date': pv.date_dernier_envoi.isoformat() if pv.date_dernier_envoi else None,
+                'completion_status': pv.statut,
+                'has_reception': has_reception,
+                'has_retour': has_retour,
+                'vgp_date': pv.vgp_date,
+                'vgp_document_path': pv.vgp_document_path,
+                'version_courante': pv.version_courante
+            })
         
         return jsonify({
             'success': True,
@@ -615,19 +755,19 @@ def list_pv():
 @app.route('/load-pv/<pv_id>', methods=['GET'])
 def load_pv(pv_id):
     """
-    Charge un PV spécifique.
+    Charge un PV spécifique depuis la base de données.
     """
     try:
-        file_path = SAVED_PV_DIR / f"{pv_id}.json"
+        pv = PV.query.get(pv_id)
         
-        if not file_path.exists():
+        if not pv:
             return jsonify({
                 'success': False,
                 'message': 'PV introuvable'
             }), 404
         
-        with open(file_path, 'r', encoding='utf-8') as f:
-            pv_data = json.load(f)
+        # Convertir en format compatible avec l'ancien système
+        pv_data = pv.to_dict()
         
         return jsonify({
             'success': True,
@@ -641,26 +781,36 @@ def load_pv(pv_id):
         }), 500
 
 
-@app.route('/delete-pv/<pv_id>', methods=['DELETE'])
+@app.route('/delete-pv/<pv_id>', methods=['POST', 'DELETE'])
 def delete_pv(pv_id):
     """
-    Supprime un PV sauvegardé.
+    Supprime un PV sauvegardé depuis la base de données.
+    Note: Accepte POST et DELETE pour compatibilité avec le frontend.
     """
     try:
-        file_path = SAVED_PV_DIR / f"{pv_id}.json"
+        pv = PV.query.get(pv_id)
         
-        if not file_path.exists():
+        if not pv:
             return jsonify({
                 'success': False,
                 'message': 'PV introuvable'
             }), 404
         
-        # Lire le nom du chantier avant de supprimer
-        with open(file_path, 'r', encoding='utf-8') as f:
-            pv_data = json.load(f)
-            chantier = pv_data.get('chantier', 'Sans nom')
+        # Récupérer le nom du chantier avant suppression
+        chantier = pv.chantier
         
-        file_path.unlink()
+        # Supprimer le document VGP s'il existe
+        if pv.vgp_document_path:
+            doc_path = Path(pv.vgp_document_path)
+            if doc_path.exists():
+                try:
+                    doc_path.unlink()
+                except Exception as e:
+                    print(f"Erreur lors de la suppression du document VGP: {e}")
+        
+        # Supprimer de la DB
+        db.session.delete(pv)
+        db.session.commit()
         
         return jsonify({
             'success': True,
@@ -668,6 +818,7 @@ def delete_pv(pv_id):
         })
     
     except Exception as e:
+        db.session.rollback()
         return jsonify({
             'success': False,
             'message': f'Erreur lors de la suppression: {str(e)}'
@@ -814,6 +965,26 @@ def download_pdf():
         # Ajouter la date de génération
         form_data['date_generation'] = datetime.now().strftime('%d/%m/%Y %H:%M')
         
+        # Récupérer la version du PV pour l'afficher sur le PDF
+        pv_id = request.form.get('pv_id')
+        if pv_id:
+            existing_pv_for_version = PV.query.get(pv_id)
+            if existing_pv_for_version:
+                form_data['version_info'] = {
+                    'number': existing_pv_for_version.version_courante,
+                    'date': existing_pv_for_version.date_mise_a_jour.strftime('%d/%m/%Y %H:%M') if existing_pv_for_version.date_mise_a_jour else datetime.now().strftime('%d/%m/%Y %H:%M')
+                }
+            else:
+                form_data['version_info'] = {
+                    'number': 1,
+                    'date': datetime.now().strftime('%d/%m/%Y %H:%M')
+                }
+        else:
+            form_data['version_info'] = {
+                'number': 1,
+                'date': datetime.now().strftime('%d/%m/%Y %H:%M')
+            }
+        
         # Générer le HTML pour le PDF
         html_content = render_template('pdf_template.html', **form_data)
         
@@ -842,10 +1013,67 @@ def download_pdf():
             'form_data': form_data
         }
         
-        # Sauvegarder dans un fichier JSON
-        file_path = SAVED_PV_DIR / f"{pv_id}.json"
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(pv_data, f, ensure_ascii=False, indent=2)
+        # Sauvegarder le PV avant le téléchargement dans la base de données
+        try:
+            # Vérifier si le PV existe déjà
+            existing_pv = PV.query.get(pv_id)
+            
+            if existing_pv:
+                # Mise à jour d'un PV existant
+                existing_pv.chantier = form_data['chantier']
+                
+                # Mettre à jour les champs indexés
+                indexed_fields = PV.extract_indexed_fields(form_data)
+                existing_pv.conducteur_email = indexed_fields.get('conducteur_email')
+                existing_pv.entreprise_email = indexed_fields.get('entreprise_email')
+                existing_pv.responsable = indexed_fields.get('responsable')
+                existing_pv.fournisseur = indexed_fields.get('fournisseur')
+                existing_pv.materiel_type = indexed_fields.get('materiel_type')
+                existing_pv.date_reception = indexed_fields.get('date_reception')
+                existing_pv.date_retour = indexed_fields.get('date_retour')
+                existing_pv.statut = indexed_fields.get('statut')
+                
+                # Mettre à jour le JSON complet
+                pv_dict = existing_pv.get_data()
+                pv_dict['form_data'] = form_data
+                pv_dict['updated_at'] = datetime.now().isoformat()
+                existing_pv.set_data(pv_dict)
+                
+            else:
+                # Créer un nouveau PV
+                indexed_fields = PV.extract_indexed_fields(form_data)
+                
+                pv_dict = {
+                    'id': pv_id,
+                    'chantier': form_data['chantier'],
+                    'created_at': datetime.now().isoformat(),
+                    'updated_at': datetime.now().isoformat(),
+                    'last_sent_date': None,
+                    'form_data': form_data
+                }
+                
+                new_pv = PV(
+                    id=pv_id,
+                    chantier=form_data['chantier'],
+                    data_dict=pv_dict,
+                    conducteur_email=indexed_fields.get('conducteur_email'),
+                    entreprise_email=indexed_fields.get('entreprise_email'),
+                    responsable=indexed_fields.get('responsable'),
+                    fournisseur=indexed_fields.get('fournisseur'),
+                    materiel_type=indexed_fields.get('materiel_type'),
+                    date_reception=indexed_fields.get('date_reception'),
+                    date_retour=indexed_fields.get('date_retour'),
+                    statut=indexed_fields.get('statut')
+                )
+                db.session.add(new_pv)
+            
+            # Commit des changements
+            db.session.commit()
+            
+        except Exception as db_error:
+            db.session.rollback()
+            print(f"Erreur lors de la sauvegarde DB: {db_error}")
+            # Continuer quand même pour retourner le PDF
         
         # Retourner le PDF en base64 pour le téléchargement côté client
         pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
@@ -866,6 +1094,224 @@ def download_pdf():
             'message': f'Erreur lors de la génération du PDF: {str(e)}'
         }), 500
 
+
+@app.route('/upload-vgp-document/<pv_id>', methods=['POST'])
+def upload_vgp_document(pv_id):
+    """
+    Upload du rapport/certificat de conformité VGP (PDF) pour un PV.
+    """
+    try:
+        pv = PV.query.get(pv_id)
+        
+        if not pv:
+            return jsonify({
+                'success': False,
+                'message': 'PV introuvable'
+            }), 404
+        
+        if 'vgp_document' not in request.files:
+            return jsonify({
+                'success': False,
+                'message': 'Aucun fichier fourni'
+            }), 400
+        
+        file = request.files['vgp_document']
+        
+        if file.filename == '':
+            return jsonify({
+                'success': False,
+                'message': 'Aucun fichier sélectionné'
+            }), 400
+        
+        # Vérifier que c'est un PDF
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({
+                'success': False,
+                'message': 'Seuls les fichiers PDF sont acceptés'
+            }), 400
+        
+        # Créer le répertoire pour les documents VGP
+        vgp_dir = Path('vgp_documents')
+        vgp_dir.mkdir(exist_ok=True)
+        
+        # Générer un nom de fichier unique
+        file_ext = '.pdf'
+        filename = f"{pv_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{file_ext}"
+        filepath = vgp_dir / filename
+        
+        # Supprimer l'ancien document s'il existe
+        if pv.vgp_document_path:
+            old_path = Path(pv.vgp_document_path)
+            if old_path.exists():
+                try:
+                    old_path.unlink()
+                except Exception as e:
+                    print(f"Erreur lors de la suppression de l'ancien fichier: {e}")
+        
+        # Sauvegarder le nouveau fichier
+        file.save(str(filepath))
+        
+        # Mettre à jour le PV
+        pv.vgp_document_path = str(filepath)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Document VGP uploadé avec succès',
+            'document_path': str(filepath)
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Erreur lors de l\'upload: {str(e)}'
+        }), 500
+
+
+@app.route('/vgp-document/<pv_id>', methods=['GET'])
+def download_vgp_document(pv_id):
+    """
+    Télécharge le rapport/certificat de conformité VGP (PDF) pour un PV.
+    """
+    try:
+        pv = PV.query.get(pv_id)
+        
+        if not pv:
+            return jsonify({
+                'success': False,
+                'message': 'PV introuvable'
+            }), 404
+        
+        if not pv.vgp_document_path:
+            return jsonify({
+                'success': False,
+                'message': 'Aucun document VGP disponible'
+            }), 404
+        
+        doc_path = Path(pv.vgp_document_path)
+        
+        if not doc_path.exists():
+            return jsonify({
+                'success': False,
+                'message': 'Fichier introuvable'
+            }), 404
+        
+        from flask import send_file
+        return send_file(
+            str(doc_path),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"VGP_{pv.chantier}_{pv.materiel_type}.pdf"
+        )
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erreur lors du téléchargement: {str(e)}'
+        }), 500
+
+
+@app.route('/pv-versions/<pv_id>', methods=['GET'])
+def get_pv_versions(pv_id):
+    """
+    Récupère la liste de toutes les versions d'un PV.
+    """
+    try:
+        pv = PV.query.get(pv_id)
+        
+        if not pv:
+            return jsonify({
+                'success': False,
+                'message': 'PV introuvable'
+            }), 404
+        
+        # Récupérer toutes les versions
+        versions = PVVersion.query.filter_by(pv_id=pv_id).order_by(PVVersion.version_number.desc()).all()
+        
+        versions_list = []
+        for version in versions:
+            versions_list.append({
+                'id': version.id,
+                'version_number': version.version_number,
+                'date_creation': version.date_creation.strftime('%d/%m/%Y %H:%M'),
+                'comment': version.comment,
+                'created_by': version.created_by
+            })
+        
+        # Ajouter la version courante
+        current_version = {
+            'version_number': pv.version_courante,
+            'date_creation': pv.date_mise_a_jour.strftime('%d/%m/%Y %H:%M'),
+            'comment': 'Version actuelle',
+            'created_by': 'system',
+            'is_current': True
+        }
+        versions_list.insert(0, current_version)
+        
+        return jsonify({
+            'success': True,
+            'pv_id': pv_id,
+            'current_version': pv.version_courante,
+            'versions': versions_list
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erreur lors de la récupération des versions: {str(e)}'
+        }), 500
+
+
+@app.route('/load-pv-version/<pv_id>/<int:version_number>', methods=['GET'])
+def load_pv_version(pv_id, version_number):
+    """
+    Charge une version spécifique d'un PV.
+    """
+    try:
+        pv = PV.query.get(pv_id)
+        
+        if not pv:
+            return jsonify({
+                'success': False,
+                'message': 'PV introuvable'
+            }), 404
+        
+        # Si c'est la version courante
+        if version_number == pv.version_courante:
+            pv_dict = pv.to_dict()
+            pv_dict['version_number'] = pv.version_courante
+            pv_dict['is_current_version'] = True
+            return jsonify({
+                'success': True,
+                'pv': pv_dict
+            })
+        
+        # Sinon, chercher dans les versions historiques
+        version = PVVersion.query.filter_by(pv_id=pv_id, version_number=version_number).first()
+        
+        if not version:
+            return jsonify({
+                'success': False,
+                'message': f'Version {version_number} introuvable'
+            }), 404
+        
+        version_data = version.get_data()
+        version_data['version_number'] = version.version_number
+        version_data['is_current_version'] = False
+        version_data['version_date'] = version.date_creation.strftime('%d/%m/%Y %H:%M')
+        version_data['version_comment'] = version.comment
+        
+        return jsonify({
+            'success': True,
+            'pv': version_data
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erreur lors du chargement de la version: {str(e)}'
+        }), 500
 
 
 if __name__ == '__main__':

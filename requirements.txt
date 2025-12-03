@@ -7,6 +7,10 @@ Pillow==10.1.0
 python-dotenv==1.0.0
 gunicorn==21.2.0
 
+# SQLAlchemy pour la base de données
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.23
+
 # Dépendances de WeasyPrint
 cffi>=1.15.0
 pycparser>=2.21

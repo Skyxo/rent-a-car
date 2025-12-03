@@ -224,6 +224,17 @@
             min-height: 40px;
             background-color: #f8f9fa;
         }
+        
+        .version-info {
+            background-color: #FF0043;
+            color: white;
+            padding: 5px 10px;
+            font-size: 10pt;
+            font-weight: bold;
+            display: inline-block;
+            border-radius: 3px;
+            margin-bottom: 3px;
+        }
     </style>
 </head>
 <body>
@@ -916,6 +927,9 @@
 
     <!-- Footer -->
     <div class="footer">
+        {% if version_info %}
+        <p><span class="version-info">VERSION {{ version_info.number }}</span> - Créée le {{ version_info.date }}</p>
+        {% endif %}
         <p>Document généré automatiquement le {{ date_generation }}</p>
         <p>France Montage - Groupe Briand - 3 rue du 11 Novembre 1918, 85500 Les Herbiers</p>
     </div>
